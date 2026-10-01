@@ -1,0 +1,22 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio
+.vs/
+
+# User-specific files
+*.user
+*.suo
+
+# Build artifacts
+*.dll
+*.pdb
+*.exe
+
+# NuGet
+packages/
+
+# OS files
+.DS_Store
+Thumbs.db
