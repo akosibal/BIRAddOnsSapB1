@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-16"?>
+<Application>
+  <forms>
+    <action type="add">
+      <form
+        uid="BIR_FORM_1"
+        type="0"
+        title="BIR Add-on"
+        visible="1"
+        default_button="0"
+        pane="0"
+        color="0"
+        left="300"
+        top="150"
+        width="500"
+        height="300">
+
+        <items>
+
+          <action type="add">
+            <item
+              uid="lblBIRInv"
+              type="8"
+              left="30"
+              top="30"
+              width="120"
+              height="20"
+              visible="1"
+              enabled="1">
+
+              <specific>
+                <static_text caption="BIR Invoice No." />
+              </specific>
+
+            </item>
+          </action>
+
+          <action type="add">
+            <item
+              uid="txtBIRInv"
+              type="16"
+              left="160"
+              top="30"
+              width="200"
+              height="20"
+              visible="1"
+              enabled="1">
+
+              <specific>
+                <edit_text />
+              </specific>
+
+            </item>
+          </action>
+
+          <action type="add">
+            <item
+              uid="btnBIRSave"
+              type="4"
+              left="160"
+              top="80"
+              width="100"
+              height="30"
+              visible="1"
+              enabled="1">
+
+              <specific>
+                <button caption="Save" />
+              </specific>
+
+            </item>
+          </action>
+
+          <action type="add">
+            <item
+              uid="btnBIRClose"
+              type="4"
+              left="270"
+              top="80"
+              width="100"
+              height="30"
+              visible="1"
+              enabled="1">
+
+              <specific>
+                <button caption="Close" />
+              </specific>
+
+            </item>
+          </action>
+
+        </items>
+
+      </form>
+    </action>
+  </forms>
+</Application>

@@ -6,10 +6,13 @@ public class Conn
 {
     private SboGuiApi sboGuiApi;
     private Application application;
-    private SAPbobsCOM.Company company;
+    public SAPbobsCOM.Company company;
+    public SAPbouiCOM.Application SBO_Application { get; private set; } = null!;
+
 
     public void Connect(string connectionString)
     {
+        
         try
         {
             // Create UI API connection
@@ -19,12 +22,12 @@ public class Conn
             sboGuiApi.Connect(connectionString);
 
             // Get SAP Business One application
-            application = sboGuiApi.GetApplication(-1);
+            SBO_Application = sboGuiApi.GetApplication(-1);
 
             Console.WriteLine("Connected to SAP Business One UI API.");
 
             // Get DI API company from UI API
-            company = (SAPbobsCOM.Company)application.Company.GetDICompany();
+            company = (SAPbobsCOM.Company)SBO_Application.Company.GetDICompany();
 
             Console.WriteLine(
                 $"Connected to SAP Business One DI API: {company.CompanyName}"

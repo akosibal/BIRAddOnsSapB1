@@ -7,7 +7,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/bin/Debug/net10.0/BIRAddOnsSapB1.exe",
             "args": [
-                "0010000100F3125CA72557FF687D0952B9E2B6"
+                "0030002C0030002C00530041005000420044005F00440061007400650076002C0050004C006F006D0056004900490056"
             ],
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,
