@@ -9,10 +9,15 @@ obj/
 *.user
 *.suo
 
-# Build artifacts
+# Build artifacts (ignore globally, but allow in lib)
 *.dll
 *.pdb
 *.exe
+
+# Allow DLLs specifically inside the lib folder
+!lib/
+!lib/*.dll
+!lib/**/*.dll
 
 # NuGet
 packages/
