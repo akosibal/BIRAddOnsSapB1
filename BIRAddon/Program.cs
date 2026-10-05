@@ -1,16 +1,7 @@
 ﻿using SAPbouiCOM;
 using SAPbobsCOM;
 
-/* Console.WriteLine("Hello, World!");
 
-Console.WriteLine("SAP Business One Add-on");
-
-Console.WriteLine("UI API: " + typeof(SboGuiApi).FullName);
-
-Console.WriteLine("DI API: " + typeof(SAPbobsCOM.Company).FullName);
-
-Console.ReadLine();
- */
 class Program
 {
     private static SAPbouiCOM.Application SBO_Application;
@@ -181,7 +172,8 @@ class Program
             );
         }
 
-        Console.WriteLine("===================+==============");
+        Console.WriteLine("=================================");
     }
 
 }
+ 

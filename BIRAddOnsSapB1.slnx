@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/BIRAddon/">
+    <Project Path="BIRAddon/BIRAddOnsSapB1.csproj" />
+  </Folder>
+  <Folder Name="/CrystalReport/">
+    <Project Path="CrystalReport/GenerateReport.csproj" />
+  </Folder>
+</Solution>

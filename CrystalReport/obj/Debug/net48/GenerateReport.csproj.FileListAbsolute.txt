@@ -1,0 +1,14 @@
+D:\System\BIRAddOnsSapB1\CrystalReport\obj\Debug\net48\GenerateReport.csproj.AssemblyReference.cache
+D:\System\BIRAddOnsSapB1\CrystalReport\obj\Debug\net48\GenerateReport.GeneratedMSBuildEditorConfig.editorconfig
+D:\System\BIRAddOnsSapB1\CrystalReport\obj\Debug\net48\GenerateReport.AssemblyInfoInputs.cache
+D:\System\BIRAddOnsSapB1\CrystalReport\obj\Debug\net48\GenerateReport.AssemblyInfo.cs
+D:\System\BIRAddOnsSapB1\CrystalReport\obj\Debug\net48\GenerateReport.csproj.CoreCompileInputs.cache
+D:\System\BIRAddOnsSapB1\CrystalReport\obj\Debug\net48\GenerateReport.sourcelink.json
+D:\System\BIRAddOnsSapB1\CrystalReport\bin\Debug\net48\GenerateReport.exe.config
+D:\System\BIRAddOnsSapB1\CrystalReport\bin\Debug\net48\GenerateReport.exe
+D:\System\BIRAddOnsSapB1\CrystalReport\bin\Debug\net48\GenerateReport.pdb
+D:\System\BIRAddOnsSapB1\CrystalReport\bin\Debug\net48\CrystalDecisions.CrystalReports.Engine.dll
+D:\System\BIRAddOnsSapB1\CrystalReport\bin\Debug\net48\CrystalDecisions.Shared.dll
+D:\System\BIRAddOnsSapB1\CrystalReport\obj\Debug\net48\Generate.27A4F571.Up2Date
+D:\System\BIRAddOnsSapB1\CrystalReport\obj\Debug\net48\GenerateReport.exe
+D:\System\BIRAddOnsSapB1\CrystalReport\obj\Debug\net48\GenerateReport.pdb

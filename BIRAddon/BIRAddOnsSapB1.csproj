@@ -1,43 +1,32 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
   <ItemGroup>
-
     <Reference Include="SAPbobsCOM">
       <HintPath>lib\SapB1\Interop.SAPbobsCOM.dll</HintPath>
       <Private>true</Private>
       <EmbedInteropTypes>false</EmbedInteropTypes>
     </Reference>
-
     <Reference Include="SAPbouiCOM">
       <HintPath>lib\SapB1\Interop.SAPbouiCOM.dll</HintPath>
       <Private>true</Private>
       <EmbedInteropTypes>false</EmbedInteropTypes>
     </Reference>
-
   </ItemGroup>
-
   <ItemGroup>
-
     <None Include="lib\SapB1\Interop.SAPbobsCOM.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-
     <None Include="lib\SapB1\Interop.SAPbouiCOM.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-
-     <Content Include="Forms\Form1.b1f">
+    <Content Include="Forms\Form1.b1f">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-
   </ItemGroup>
-
-
+  
 </Project>
