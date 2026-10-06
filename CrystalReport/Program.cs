@@ -12,18 +12,18 @@ namespace GenerateReport
         private const string OutputPath = @"D:\System\BIRAddOnsSapB1\CrystalReport\Output\Invoice.pdf";
 
         // Database logon (adjust to your SAP B1 / SQL Server)
-        private const string DbServer   = "YOUR_SQL_SERVER";     // e.g. "SAPSRV" or "SAPSRV,1433"
-        private const string DbName     = "YOUR_COMPANY_DB";     // e.g. "SBODEMOUS"
-        private const string DbUser     = "sa";
-        private const string DbPassword = "your_password";
+        private const string DbServer = "192.168.5.22";     // e.g. "SAPSRV" or "SAPSRV,1433"
+        private const string DbName = "TEST_MDTI_20260732";     // e.g. "SBODEMOUS"
+        private const string DbUser = "sa";
+        private const string DbPassword = "1q2w#E$R";
 
         // Parameter values to inject (name -> value). Case-insensitive.
         private static readonly Dictionary<string, object> ParameterValues =
             new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
         {
-            { "@dockey",    "139320" },
-            { "@objectid",  "17"     },
-            { "@usercode",  "bal"    },
+            { "dockey@",  "139320" },
+            { "objectid@", "13" },
+            { "usercode@", "bal" },
         };
         // ==================
 
@@ -41,7 +41,14 @@ namespace GenerateReport
                 ApplyLogon(report);
 
                 // 2) Set parameters on main report + all subreports (skip linked ones)
-                ApplyParameters(report, isMainReport: true);
+                ApplyMainParameters(report);
+
+                string outputDirectory = Path.GetDirectoryName(OutputPath);
+
+                if (!Directory.Exists(outputDirectory))
+                {
+                    Directory.CreateDirectory(outputDirectory);
+                }
 
                 // 3) Export
                 report.ExportToDisk(ExportFormatType.PortableDocFormat, OutputPath);
@@ -69,20 +76,46 @@ namespace GenerateReport
         {
             var logonInfo = new ConnectionInfo
             {
-                ServerName   = DbServer,
+                ServerName = DbServer,
                 DatabaseName = DbName,
-                UserID       = DbUser,
-                Password     = DbPassword,
+                UserID = DbUser,
+                Password = DbPassword,
                 IntegratedSecurity = false
             };
 
             // Main report tables
             foreach (Table table in report.Database.Tables)
+            {
                 SetTableLogon(table, logonInfo);
+            }
 
-            // Recurse into subreports
+            Console.WriteLine($"Applied DB logon to main report '{report.Name}'");
+
+            // IMPORTANT:
+            // Only enumerate Subreports from the MAIN report.
             foreach (ReportDocument sub in report.Subreports)
-                ApplyLogon(sub);
+            {
+                ApplySubreportLogon(sub, logonInfo);
+            }
+        }
+
+        private static void ApplySubreportLogon(
+            ReportDocument subreport,
+            ConnectionInfo logonInfo)
+        {
+            Console.WriteLine($"Applied DB logon to subreport '{subreport.Name}'");
+
+            foreach (Table table in subreport.Database.Tables)
+            {
+                SetTableLogon(table, logonInfo);
+            }
+
+            // DO NOT do this:
+            //
+            // foreach (ReportDocument sub in subreport.Subreports)
+            //
+            // Crystal throws:
+            // NotSupportedException: Not supported within subreports.
         }
 
         private static void SetTableLogon(Table table, ConnectionInfo logonInfo)
@@ -98,36 +131,37 @@ namespace GenerateReport
         // ---------------------------------------------------------------
         // Recursively set parameter values (skip linked parameters)
         // ---------------------------------------------------------------
-        private static void ApplyParameters(ReportDocument report, bool isMainReport)
+        private static void ApplyMainParameters(ReportDocument report)
         {
-            string label = isMainReport ? "Main report" : $"Subreport [{report.Name}]";
-            Console.WriteLine($"\n--- {label}: scanning parameters ---");
+            Console.WriteLine("\n--- Main report: scanning parameters ---");
 
             foreach (ParameterFieldDefinition param in report.DataDefinition.ParameterFields)
             {
                 bool linked = SafeIsLinked(param);
-                Console.WriteLine($"  {param.Name}  Linked={linked}  ReportName='{param.ReportName}'");
 
-                // Linked parameters are fed automatically from the parent — do NOT set them
-                if (linked) continue;
+                Console.WriteLine(
+                    $"  {param.Name}  Linked={linked}  ReportName='{param.ReportName}'");
+
+                // Main report's own parameters only
+                if (linked)
+                    continue;
 
                 if (ParameterValues.TryGetValue(param.Name, out object value))
                 {
                     try
                     {
                         SetParameter(report, param, value);
-                        Console.WriteLine($"    -> set {param.Name} = {value}");
+
+                        Console.WriteLine(
+                            $"    -> set {param.Name} = {value}");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"    !! Failed to set {param.Name}: {ex.Message}");
+                        Console.WriteLine(
+                            $"    !! Failed to set {param.Name}: {ex.Message}");
                     }
                 }
             }
-
-            // Recurse into subreports
-            foreach (ReportDocument sub in report.Subreports)
-                ApplyParameters(sub, isMainReport: false);
         }
 
         // ---------------------------------------------------------------
@@ -142,10 +176,9 @@ namespace GenerateReport
                 case CrystalDecisions.Shared.FieldValueType.NumberField:
                 case CrystalDecisions.Shared.FieldValueType.Int32sField:
                 case CrystalDecisions.Shared.FieldValueType.Int16sField:
-                case CrystalDecisions.Shared.FieldValueType.Int64sField:
+                case CrystalDecisions.Shared.FieldValueType.Int32uField:
                     dv.Value = Convert.ToInt64(rawValue);
                     break;
-                case CrystalDecisions.Shared.FieldValueType.DecimalField:
                 case CrystalDecisions.Shared.FieldValueType.CurrencyField:
                     dv.Value = Convert.ToDecimal(rawValue);
                     break;

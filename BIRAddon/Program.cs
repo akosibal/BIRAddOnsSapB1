@@ -9,6 +9,8 @@ class Program
 
     static Conn conn = new Conn();
 
+    static ReportClass reportClass = new ReportClass("192.168.5.22", "TEST_MDTI_20260732", "sa", "1q2w#E$R");
+
     static void Main(string[] args)
     {
         Console.WriteLine("SAP Business One Add-on");
@@ -119,6 +121,9 @@ class Program
     {
         BubbleEvent = true;
 
+
+        string docEntry = string.Empty;
+
         // Sales Invoice
         if (BusinessObjectInfo.Type != "13")
             return;
@@ -150,15 +155,40 @@ class Program
             SAPbouiCOM.DBDataSource oDBDataSource =
                 oForm.DataSources.DBDataSources.Item("OINV");
 
-            string docEntry =
-                oDBDataSource.GetValue("DocEntry", 0).Trim();
+            docEntry = oDBDataSource.GetValue("DocEntry", 0).Trim();
 
             Console.WriteLine($"DocEntry: {docEntry}");
 
             if (string.IsNullOrEmpty(docEntry))
             {
                 Console.WriteLine("DocEntry is empty.");
+
+                SBO_Application.MessageBox(
+                                "DocEntry is empty.",
+                                1,
+                                "OK",
+                                "",
+                                "");
+
                 return;
+            }
+            else
+            {
+                var pathReport = Path.Combine(
+                    AppContext.BaseDirectory,
+                    "Reports",
+                    "Invoice.rpt"
+                );
+
+                var parameterValues = new Dictionary<string, object>
+                {
+                    { "dockey@",  docEntry },
+                    { "objectid@", "13" },
+                    { "usercode@", "bal" },
+                };
+
+                Console.WriteLine($"DocEntry: {docEntry}");
+                var reportReulst = reportClass.GeneratePdf(pathReport, parameterValues);
             }
 
             Console.WriteLine(
@@ -170,10 +200,25 @@ class Program
             Console.WriteLine(
                 $"Error getting DocEntry: {ex}"
             );
+
+            try
+            {
+                SBO_Application.MessageBox(
+                    $"Error generating Crystal Report.\n\n" +
+                    $"DocEntry: {docEntry}\n\n" +
+                    $"Error:\n{ex.Message}",
+                    1,
+                    "OK",
+                    "",
+                    "");
+            }
+            catch
+            {
+                // Prevent MessageBox failure from crashing the add-on
+            }
         }
 
         Console.WriteLine("=================================");
     }
 
 }
- 

@@ -10,10 +10,13 @@ public class ReportClass
     // Database Configuration
     // ============================================================
 
-    private readonly string _dbServer;
-    private readonly string _dbName;
-    private readonly string _dbUser;
-    private readonly string _dbPassword;
+
+    private const string OutputPath = @"D:\System\BIRAddOnsSapB1\CrystalReport\Output\Invoice.pdf";
+
+    string _dbServer { get; set; } = "192.168.5.22";     // e.g. "SAPSRV" or "SAPSRV,1433"
+    string _dbName { get; set; } = "TEST_MDTI_20260732";     // e.g. "SBODEMOUS"
+    string _dbUser { get; set; } = "sa";
+    string _dbPassword { get; set; } = "1q2w#E$R";
 
     public ReportClass(
         string dbServer,
@@ -74,6 +77,8 @@ public class ReportClass
             // ----------------------------------------------------
             // Export PDF to memory
             // ----------------------------------------------------
+
+            report.ExportToDisk(ExportFormatType.PortableDocFormat, OutputPath);
 
             using Stream stream =
                 report.ExportToStream(
@@ -223,33 +228,33 @@ public class ReportClass
         ParameterFieldDefinition param,
         object rawValue)
     {
-         var dv = new ParameterDiscreteValue();
+        var dv = new ParameterDiscreteValue();
 
-            switch (param.ValueType)
-            {
-                case CrystalDecisions.Shared.FieldValueType.NumberField:
-                case CrystalDecisions.Shared.FieldValueType.Int32sField:
-                case CrystalDecisions.Shared.FieldValueType.Int16sField:
-                case CrystalDecisions.Shared.FieldValueType.Int32uField:
-                    dv.Value = Convert.ToInt64(rawValue);
-                    break;
-                case CrystalDecisions.Shared.FieldValueType.CurrencyField:
-                    dv.Value = Convert.ToDecimal(rawValue);
-                    break;
-                case CrystalDecisions.Shared.FieldValueType.DateField:
-                case CrystalDecisions.Shared.FieldValueType.DateTimeField:
-                    dv.Value = Convert.ToDateTime(rawValue);
-                    break;
-                case CrystalDecisions.Shared.FieldValueType.BooleanField:
-                    dv.Value = Convert.ToBoolean(rawValue);
-                    break;
-                default:
-                    dv.Value = rawValue?.ToString() ?? string.Empty;
-                    break;
-            }
+        switch (param.ValueType)
+        {
+            case CrystalDecisions.Shared.FieldValueType.NumberField:
+            case CrystalDecisions.Shared.FieldValueType.Int32sField:
+            case CrystalDecisions.Shared.FieldValueType.Int16sField:
+            case CrystalDecisions.Shared.FieldValueType.Int32uField:
+                dv.Value = Convert.ToInt64(rawValue);
+                break;
+            case CrystalDecisions.Shared.FieldValueType.CurrencyField:
+                dv.Value = Convert.ToDecimal(rawValue);
+                break;
+            case CrystalDecisions.Shared.FieldValueType.DateField:
+            case CrystalDecisions.Shared.FieldValueType.DateTimeField:
+                dv.Value = Convert.ToDateTime(rawValue);
+                break;
+            case CrystalDecisions.Shared.FieldValueType.BooleanField:
+                dv.Value = Convert.ToBoolean(rawValue);
+                break;
+            default:
+                dv.Value = rawValue?.ToString() ?? string.Empty;
+                break;
+        }
 
-            report.ParameterFields[param.Name].CurrentValues.Clear();
-            report.ParameterFields[param.Name].CurrentValues.Add(dv);
+        report.ParameterFields[param.Name].CurrentValues.Clear();
+        report.ParameterFields[param.Name].CurrentValues.Add(dv);
     }
 
     // ============================================================
