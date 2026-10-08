@@ -78,7 +78,7 @@ public class ReportClass
             // Export PDF to memory
             // ----------------------------------------------------
 
-            report.ExportToDisk(ExportFormatType.PortableDocFormat, OutputPath);
+           // report.ExportToDisk(ExportFormatType.PortableDocFormat, OutputPath);
 
             using Stream stream =
                 report.ExportToStream(

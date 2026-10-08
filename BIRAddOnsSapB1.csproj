@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net48</TargetFramework>
@@ -7,66 +6,50 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
-  <!-- SAP Business One -->
   <ItemGroup>
     <Reference Include="SAPbobsCOM">
       <HintPath>lib\SapB1\Interop.SAPbobsCOM.dll</HintPath>
       <Private>true</Private>
       <EmbedInteropTypes>false</EmbedInteropTypes>
     </Reference>
-
     <Reference Include="SAPbouiCOM">
       <HintPath>lib\SapB1\Interop.SAPbouiCOM.dll</HintPath>
       <Private>true</Private>
       <EmbedInteropTypes>false</EmbedInteropTypes>
     </Reference>
   </ItemGroup>
-
-  <!-- Crystal Reports -->
   <ItemGroup>
     <Reference Include="CrystalDecisions.CrystalReports.Engine">
       <HintPath>lib\CrystalShared\CrystalDecisions.CrystalReports.Engine.dll</HintPath>
       <Private>true</Private>
     </Reference>
-
     <Reference Include="CrystalDecisions.Shared">
       <HintPath>lib\CrystalShared\CrystalDecisions.Shared.dll</HintPath>
       <Private>true</Private>
     </Reference>
   </ItemGroup>
-
-  <!-- Files copied to bin\Debug\net48 -->
   <ItemGroup>
-
-    <!-- SAP B1 DLLs -->
     <None Include="lib\SapB1\Interop.SAPbobsCOM.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-
     <None Include="lib\SapB1\Interop.SAPbouiCOM.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-
-    <!-- Crystal Reports DLLs -->
     <None Include="lib\CrystalShared\CrystalDecisions.CrystalReports.Engine.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-
     <None Include="lib\CrystalShared\CrystalDecisions.Shared.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-
-    <!-- SAP B1 Form -->
     <Content Include="Forms\Form1.b1f">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-
-    <!-- Crystal Report -->
     <Content Include="Reports\Invoice.rpt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-
   </ItemGroup>
-
+  <ItemGroup>
+    <PackageReference Include="MailKit" Version="4.18.1"/>
+    <PackageReference Include="MimeKit" Version="4.18.1"/>
+  </ItemGroup>
 </Project>

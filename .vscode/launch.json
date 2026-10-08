@@ -5,7 +5,7 @@
             "name": ".NET Launch",
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/Debug/net10.0/BIRAddOnsSapB1.exe",
+            "program": "${workspaceFolder}/bin/Debug/net48/BIRAddOnsSapB1.exe",
             "args": [
                 "0030002C0030002C00530041005000420044005F00440061007400650076002C0050004C006F006D0056004900490056"
             ],

@@ -8,6 +8,7 @@ class Program
     private static SAPbobsCOM.Company Company;
 
     static Conn conn = new Conn();
+    static SendEmailServices email = new SendEmailServices();
 
     static ReportClass reportClass = new ReportClass("192.168.5.22", "TEST_MDTI_20260732", "sa", "1q2w#E$R");
 
@@ -116,8 +117,8 @@ class Program
 
 
     static void SBO_Application_FormDataEvent(
-     ref SAPbouiCOM.BusinessObjectInfo BusinessObjectInfo,
-     out bool BubbleEvent)
+      ref SAPbouiCOM.BusinessObjectInfo BusinessObjectInfo,
+      out bool BubbleEvent)
     {
         BubbleEvent = true;
 
@@ -189,6 +190,32 @@ class Program
 
                 Console.WriteLine($"DocEntry: {docEntry}");
                 var reportReulst = reportClass.GeneratePdf(pathReport, parameterValues);
+
+                var sendEmail = email.SendReleasedDTC_ReportAsync(reportReulst, "").GetAwaiter().GetResult();
+
+                if (sendEmail.result)
+                {
+                    Module.SaveEmailLogs(docEntry,
+                                    Company,
+                                    SBO_Application,
+                                    "C0001",        // Replace with actual CardCode
+                                    "Customer Name",// Replace with actual CardName
+                                    "INV-12345",    // Replace with actual DocNum
+                                    "13"            // DocType (13 = Invoice)
+                                );
+                }
+                else
+                {
+                    // Email failed - do not save to UDT
+                    Console.WriteLine($"Email failed: {sendEmail.message}");
+
+                    SBO_Application.MessageBox(
+                        $"Email failed, data NOT saved to UDT:\n\n{sendEmail.message}",
+                        1,
+                        "OK",
+                        "",
+                        "");
+                }
             }
 
             Console.WriteLine(
