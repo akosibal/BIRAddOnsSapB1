@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="UTF-16"?>
 <Application>
   <forms>
@@ -5,93 +6,181 @@
       <form
         uid="BIR_FORM_1"
         type="0"
-        title="BIR Add-on"
-        visible="1"
-        default_button="0"
-        pane="0"
-        color="0"
-        left="300"
-        top="150"
-        width="500"
-        height="300">
+        title="EIS Auto Email Logs"
+        visible="0"
+        left="200"
+        top="100"
+        width="900"
+        height="550"
+        clientWidth="890"
+        clientHeight="540">
 
         <items>
 
+          <!-- FROM DATE LABEL -->
           <action type="add">
-            <item
-              uid="lblBIRInv"
-              type="8"
-              left="30"
-              top="30"
-              width="120"
-              height="20"
-              visible="1"
-              enabled="1">
-
+            <item uid="lblFrom" type="8"
+                  left="10" top="12"
+                  width="40" height="16"
+                  visible="1" enabled="1">
               <specific>
-                <static_text caption="BIR Invoice No." />
+                <static_text caption="From:" />
               </specific>
-
             </item>
           </action>
 
+          <!-- FROM DATE -->
           <action type="add">
-            <item
-              uid="txtBIRInv"
-              type="16"
-              left="160"
-              top="30"
-              width="200"
-              height="20"
-              visible="1"
-              enabled="1">
-
+            <item uid="edFrom" type="16"
+                  left="55" top="10"
+                  width="90" height="20"
+                  visible="1" enabled="1">
               <specific>
                 <edit_text />
               </specific>
-
             </item>
           </action>
 
+          <!-- TO DATE LABEL -->
           <action type="add">
-            <item
-              uid="btnBIRSave"
-              type="4"
-              left="160"
-              top="80"
-              width="100"
-              height="30"
-              visible="1"
-              enabled="1">
-
+            <item uid="lblTo" type="8"
+                  left="160" top="12"
+                  width="25" height="16"
+                  visible="1" enabled="1">
               <specific>
-                <button caption="Save" />
+                <static_text caption="To:" />
               </specific>
-
             </item>
           </action>
 
+          <!-- TO DATE -->
           <action type="add">
-            <item
-              uid="btnBIRClose"
-              type="4"
-              left="270"
-              top="80"
-              width="100"
-              height="30"
-              visible="1"
-              enabled="1">
-
+            <item uid="edTo" type="16"
+                  left="190" top="10"
+                  width="90" height="20"
+                  visible="1" enabled="1">
               <specific>
-                <button caption="Close" />
+                <edit_text />
               </specific>
+            </item>
+          </action>
 
+          <!-- SENT LABEL -->
+          <action type="add">
+            <item uid="lblSent" type="8"
+                  left="300" top="12"
+                  width="40" height="16"
+                  visible="1" enabled="1">
+              <specific>
+                <static_text caption="Sent:" />
+              </specific>
+            </item>
+          </action>
+
+          <!-- SENT COMBO BOX -->
+          <action type="add">
+            <item uid="cbSent" type="113"
+                  left="345" top="10"
+                  width="80" height="20"
+                  visible="1" enabled="1">
+              <specific>
+                <combo_box />
+              </specific>
+            </item>
+          </action>
+
+          <!-- SEARCH BUTTON -->
+          <action type="add">
+            <item uid="btnSearch" type="4"
+                  left="440" top="9"
+                  width="80" height="22"
+                  visible="1" enabled="1">
+              <specific>
+                <button caption="Search" />
+              </specific>
+            </item>
+          </action>
+
+          <!-- CLEAR BUTTON -->
+          <action type="add">
+            <item uid="btnClear" type="4"
+                  left="530" top="9"
+                  width="80" height="22"
+                  visible="1" enabled="1">
+              <specific>
+                <button caption="Clear" />
+              </specific>
+            </item>
+          </action>
+
+          <!-- LOGS MATRIX -->
+          <action type="add">
+            <item uid="mtxLogs" type=" matrix"
+                  left="10" top="40"
+                  width="870" height="470"
+                  visible="1" enabled="1"
+                  fromPane="0" toPane="0" paneLevel="0">
+              <specific>
+                <matrix>
+                  <columns>
+
+                    <column uid="colCode" type="16"
+                            width="45" title="Code"
+                            visible="1" editable="0" />
+
+                    <column uid="colName" type="16"
+                            width="65" title="Name"
+                            visible="1" editable="0" />
+
+                    <column uid="colSent" type="16"
+                            width="40" title="Sent"
+                            visible="1" editable="0" />
+
+                    <column uid="colCC" type="16"
+                            width="65" title="CardCode"
+                            visible="1" editable="0" />
+
+                    <column uid="colCN" type="16"
+                            width="105" title="CardName"
+                            visible="1" editable="0" />
+
+                    <column uid="colDN" type="16"
+                            width="60" title="DocNum"
+                            visible="1" editable="0" />
+
+                    <column uid="colDD" type="16"
+                            width="70" title="DocDate"
+                            visible="1" editable="0" />
+
+                    <column uid="colDT" type="16"
+                            width="85" title="DocType"
+                            visible="1" editable="0" />
+
+                    <column uid="colIN" type="16"
+                            width="65" title="InvNo"
+                            visible="1" editable="0" />
+
+                    <column uid="colUC" type="16"
+                            width="60" title="UserCode"
+                            visible="1" editable="0" />
+
+                    <column uid="colCD" type="16"
+                            width="75" title="Created"
+                            visible="1" editable="0" />
+
+                    <column uid="colRM" type="16"
+                            width="110" title="Remarks"
+                            visible="1" editable="0" />
+
+                  </columns>
+                </matrix>
+              </specific>
             </item>
           </action>
 
         </items>
-
       </form>
     </action>
   </forms>
 </Application>
+

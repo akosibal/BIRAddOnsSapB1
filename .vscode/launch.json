@@ -2,8 +2,8 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": ".NET Launch",
-            "type": "coreclr",
+            "name": ".NET Framework Launch",
+            "type": "clr",
             "request": "launch",
             "program": "${workspaceFolder}/bin/Debug/net48/BIRAddOnsSapB1.exe",
             "args": [

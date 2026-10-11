@@ -37,11 +37,28 @@ class Program
 
             Console.WriteLine("Add-on started.");
 
+            SBO_Application.MenuEvent += SBO_Application_MenuEvent;
             SBO_Application.FormDataEvent +=
                 SBO_Application_FormDataEvent;
 
+            SBO_Application.AppEvent += SBO_Application_AppEvent;
+            SBO_Application.ItemEvent += SBO_Application_ItemEvent;
+
+            Module.AddMenuItems(SBO_Application);
+
+
             Console.WriteLine("FormDataEvent registered.");
             Console.WriteLine("Waiting for SAP Business One events...");
+
+            /*       Module.SaveEmailLogs("1",
+                                       Company,
+                                       SBO_Application,
+                                       "C0001",        // Replace with actual CardCode
+                                       "Customer Name",// Replace with actual CardName
+                                       "INV-12345",    // Replace with actual DocNum
+                                       "INVOICE"            // DocType (13 = Invoice)
+                                ); */
+
 
             System.Threading.Thread.Sleep(
                 System.Threading.Timeout.Infinite
@@ -52,67 +69,64 @@ class Program
             Console.WriteLine(ex);
         }
     }
-    static void LoadForm(Conn conn)
+
+    static void SBO_Application_AppEvent(SAPbouiCOM.BoAppEventTypes EventType)
     {
-        Console.WriteLine("Loading form:");
-
-        string formPath = Path.Combine(
-            AppContext.BaseDirectory,
-            "Forms",
-            "Form1.b1f"
-        );
-
-        Console.WriteLine(formPath);
-
-        if (!File.Exists(formPath))
+        switch (EventType)
         {
-            throw new FileNotFoundException(
-                "Form1.b1f was not found.",
-                formPath
-            );
+            case SAPbouiCOM.BoAppEventTypes.aet_ShutDown:
+            case SAPbouiCOM.BoAppEventTypes.aet_CompanyChanged:
+            case SAPbouiCOM.BoAppEventTypes.aet_ServerTerminition:
+                RemoveMenuItems();
+                System.Windows.Forms.Application.Exit();
+                break;
         }
+    }
 
-        Console.WriteLine("Form file found.");
-
-        string xml = File.ReadAllText(formPath);
-
-        Console.WriteLine("XML loaded.");
-        Console.WriteLine($"XML length: {xml.Length}");
-
-        Console.WriteLine("Checking SBO_Application...");
-
-        if (conn.SBO_Application == null)
+    private static void RemoveMenuItems()
+    {
+        try
         {
-            throw new Exception(
-                "SBO_Application is NULL. The SAP Business One UI API connection was not initialized."
-            );
+            SBO_Application.Menus.RemoveEx("MNU_MARSMAN_ROOT");
         }
+        catch { /* ignore */ }
+    }
 
-        Console.WriteLine("SBO_Application OK.");
+    static void SBO_Application_ItemEvent(
+     string FormUID,
+     ref SAPbouiCOM.ItemEvent pVal,
+     out bool BubbleEvent)
+    {
+        BubbleEvent = true;
 
-        Console.WriteLine("Calling LoadBatchActions...");
-
-        conn.SBO_Application.LoadBatchActions(ref xml);
-
-        Console.WriteLine("LoadBatchActions completed.");
-
-        Console.WriteLine("Getting BIR_FORM_1...");
-
-        SAPbouiCOM.Form form =
-            conn.SBO_Application.Forms.Item("BIR_FORM_1");
-
-        if (form == null)
+        try
         {
-            throw new Exception(
-                "BIR_FORM_1 was not found after loading Form1.b1f."
-            );
+            // Only handle our form
+            if (FormUID != "BIR_FORM_1") return;
+
+            // Only handle button clicks (after action)
+            if (pVal.EventType != SAPbouiCOM.BoEventTypes.et_ITEM_PRESSED) return;
+            if (pVal.BeforeAction) return;
+
+            var oForm = SBO_Application.Forms.Item("BIR_FORM_1");
+
+            switch (pVal.ItemUID)
+            {
+                case "btnSearch":
+                    Console.WriteLine("Search clicked");
+                    AddModules.LoadLogs(oForm, Company, SBO_Application);
+                    break;
+
+                case "btnClear":
+                    Console.WriteLine("Clear clicked");
+                    AddModules.ApplyDefaultFiltersAndLoad(oForm, Company, SBO_Application);
+                    break;
+            }
         }
-
-        Console.WriteLine("BIR_FORM_1 found.");
-
-        form.Visible = true;
-
-        Console.WriteLine("BIR_FORM_1 is now visible.");
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ItemEvent error: {ex.Message}");
+        }
     }
 
 
@@ -123,129 +137,48 @@ class Program
         BubbleEvent = true;
 
 
-        string docEntry = string.Empty;
 
-        // Sales Invoice
-        if (BusinessObjectInfo.Type != "13")
-            return;
 
-        // ADD only
-        if (BusinessObjectInfo.EventType !=
-            SAPbouiCOM.BoEventTypes.et_FORM_DATA_ADD)
-            return;
+        switch (BusinessObjectInfo.Type)
+        {
+            case "13":
+                AddModules.AddInvoice(SBO_Application, Company, ref BusinessObjectInfo, reportClass);
+                break;
+        }
 
-        // AFTER ADD
-        if (BusinessObjectInfo.BeforeAction)
-            return;
+        if (BusinessObjectInfo.FormTypeEx == "BIR_FORM_1" &&
+          BusinessObjectInfo.EventType == SAPbouiCOM.BoEventTypes.et_FORM_CLOSE &&
+          !BusinessObjectInfo.BeforeAction)
+        {
+            Console.WriteLine("BIR_FORM_1 closed by user.");
+            // SAP keeps the form in memory; no cleanup needed here.
+            // The next call to ShowAutoEmailForm will re-focus it.
+        }
+
 
         Console.WriteLine("=================================");
-        Console.WriteLine("Sales Invoice successfully added!");
+    }
 
-        Console.WriteLine($"FormUID: {BusinessObjectInfo.FormUID}");
-        Console.WriteLine($"ObjectKey: {BusinessObjectInfo.ObjectKey}");
+    static void SBO_Application_MenuEvent(
+       ref SAPbouiCOM.MenuEvent pVal,
+       out bool BubbleEvent)
+    {
+        BubbleEvent = true;
 
         try
         {
-            SAPbouiCOM.Form oForm =
-                SBO_Application.Forms.Item(
-                    BusinessObjectInfo.FormUID
-                );
-
-            Console.WriteLine($"Form Type: {oForm.TypeEx}");
-
-            SAPbouiCOM.DBDataSource oDBDataSource =
-                oForm.DataSources.DBDataSources.Item("OINV");
-
-            docEntry = oDBDataSource.GetValue("DocEntry", 0).Trim();
-
-            Console.WriteLine($"DocEntry: {docEntry}");
-
-            if (string.IsNullOrEmpty(docEntry))
+            if (pVal.BeforeAction == false)  // AFTER the click
             {
-                Console.WriteLine("DocEntry is empty.");
-
-                SBO_Application.MessageBox(
-                                "DocEntry is empty.",
-                                1,
-                                "OK",
-                                "",
-                                "");
-
-                return;
-            }
-            else
-            {
-                var pathReport = Path.Combine(
-                    AppContext.BaseDirectory,
-                    "Reports",
-                    "Invoice.rpt"
-                );
-
-                var parameterValues = new Dictionary<string, object>
+                if (pVal.MenuUID == "MNU_AUTOEMAIL")
                 {
-                    { "dockey@",  docEntry },
-                    { "objectid@", "13" },
-                    { "usercode@", "bal" },
-                };
-
-                Console.WriteLine($"DocEntry: {docEntry}");
-                var reportReulst = reportClass.GeneratePdf(pathReport, parameterValues);
-
-                var sendEmail = email.SendReleasedDTC_ReportAsync(reportReulst, "").GetAwaiter().GetResult();
-
-                if (sendEmail.result)
-                {
-                    Module.SaveEmailLogs(docEntry,
-                                    Company,
-                                    SBO_Application,
-                                    "C0001",        // Replace with actual CardCode
-                                    "Customer Name",// Replace with actual CardName
-                                    "INV-12345",    // Replace with actual DocNum
-                                    "13"            // DocType (13 = Invoice)
-                                );
-                }
-                else
-                {
-                    // Email failed - do not save to UDT
-                    Console.WriteLine($"Email failed: {sendEmail.message}");
-
-                    SBO_Application.MessageBox(
-                        $"Email failed, data NOT saved to UDT:\n\n{sendEmail.message}",
-                        1,
-                        "OK",
-                        "",
-                        "");
+                    AddModules.ShowAutoEmailForm(SBO_Application, Company);
                 }
             }
-
-            Console.WriteLine(
-                $"Sales Invoice DocEntry = {docEntry}"
-            );
         }
         catch (Exception ex)
         {
-            Console.WriteLine(
-                $"Error getting DocEntry: {ex}"
-            );
-
-            try
-            {
-                SBO_Application.MessageBox(
-                    $"Error generating Crystal Report.\n\n" +
-                    $"DocEntry: {docEntry}\n\n" +
-                    $"Error:\n{ex.Message}",
-                    1,
-                    "OK",
-                    "",
-                    "");
-            }
-            catch
-            {
-                // Prevent MessageBox failure from crashing the add-on
-            }
+            Console.WriteLine($"MenuEvent error: {ex.Message}");
         }
-
-        Console.WriteLine("=================================");
     }
 
 }
