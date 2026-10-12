@@ -10,7 +10,13 @@ class Program
     static Conn conn = new Conn();
     static SendEmailServices email = new SendEmailServices();
 
-    static ReportClass reportClass = new ReportClass("192.168.5.22", "TEST_MDTI_20260732", "sa", "1q2w#E$R");
+    public static ReportClass reportClass = new ReportClass("192.168.5.22", "TEST_MDTI_20260732", "sa", "1q2w#E$R");
+    public static string pathReportInvoice = Path.Combine(
+                  AppContext.BaseDirectory,
+                  "Reports",
+                  "Invoice.rpt"
+              );
+
 
     static void Main(string[] args)
     {
@@ -92,7 +98,7 @@ class Program
         catch { /* ignore */ }
     }
 
-    static void SBO_Application_ItemEvent(
+    static  void SBO_Application_ItemEvent(
      string FormUID,
      ref SAPbouiCOM.ItemEvent pVal,
      out bool BubbleEvent)
@@ -120,6 +126,10 @@ class Program
                 case "btnClear":
                     Console.WriteLine("Clear clicked");
                     AddModules.ApplyDefaultFiltersAndLoad(oForm, Company, SBO_Application);
+                    break;
+
+                case "btnSend":
+                     AddModules.SendInvoiceEmail(oForm, Company, SBO_Application);
                     break;
             }
         }

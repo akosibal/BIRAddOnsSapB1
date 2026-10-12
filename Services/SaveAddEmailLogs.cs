@@ -10,7 +10,6 @@ public static class AddModules
     static SendEmailServices email = new SendEmailServices();
 
 
-
     public static void AddInvoice(SAPbouiCOM.Application SBO_Application, SAPbobsCOM.Company Company, ref SAPbouiCOM.BusinessObjectInfo BusinessObjectInfo, ReportClass reportClass)
     {
         string docEntry = string.Empty;
@@ -129,11 +128,6 @@ public static class AddModules
             }
             else
             {
-                var pathReport = Path.Combine(
-                    AppContext.BaseDirectory,
-                    "Reports",
-                    "Invoice.rpt"
-                );
 
                 var parameterValues = new Dictionary<string, object>
                 {
@@ -143,7 +137,7 @@ public static class AddModules
                 };
 
                 Console.WriteLine($"DocEntry: {docEntry}");
-                var reportReulst = reportClass.GeneratePdf(pathReport, parameterValues);
+                var reportReulst = reportClass.GeneratePdf(Program.pathReportInvoice, parameterValues);
 
                 var sendEmail = email.SendEInvoiceAsync(reportReulst, Company, cardCode, userSign, docEntry, "A/R Invoices").GetAwaiter().GetResult();
 
@@ -155,7 +149,7 @@ public static class AddModules
                                     cardCode,        // Replace with actual CardCode
                                     cardName,// Replace with actual CardName
                                     InvoiceNo,    // Replace with actual DocNum
-                                    "A/R INVOICE",          // DocType (13 = Invoice)
+                                    "13",          // DocType (13 = Invoice)
                                     "Y",
                                     userName,
                                     taxDate,
@@ -173,7 +167,7 @@ public static class AddModules
                                    cardCode,        // Replace with actual CardCode
                                    cardName,// Replace with actual CardName
                                    InvoiceNo,    // Replace with actual DocNum
-                                   "A/R INVOICE",          // DocType (13 = Invoice)
+                                   "13",          // DocType (13 = Invoice)
                                    "N",
                                    userName,
                                    taxDate,
@@ -314,6 +308,220 @@ public static class AddModules
         }
     }
 
+    public static void SendInvoiceEmail(
+     SAPbouiCOM.Form oForm,
+     SAPbobsCOM.Company oCompany,
+     SAPbouiCOM.Application SBO_Application)
+    {
+        try
+        {
+            SAPbouiCOM.Matrix oMatrix =
+                (SAPbouiCOM.Matrix)oForm.Items.Item("mtxLogs").Specific;
+
+            var selectedInvoices = new List<string>();
+
+            for (int i = 1; i <= oMatrix.RowCount; i++)
+            {
+                SAPbouiCOM.CheckBox chk =
+                    (SAPbouiCOM.CheckBox)oMatrix.Columns
+                        .Item("colSelect").Cells.Item(i).Specific;
+
+                if (!chk.Checked)
+                    continue;
+
+                SAPbouiCOM.EditText txt =
+                    (SAPbouiCOM.EditText)oMatrix.Columns
+                        .Item("colDN").Cells.Item(i).Specific;
+
+                string docEntry = txt.Value.Trim();
+
+                if (!string.IsNullOrEmpty(docEntry))
+                    selectedInvoices.Add(docEntry);
+            }
+
+            if (selectedInvoices.Count == 0)
+            {
+                SBO_Application.StatusBar.SetText(
+                    "Please select at least one invoice.",
+                    SAPbouiCOM.BoMessageTime.bmt_Short,
+                    SAPbouiCOM.BoStatusBarMessageType.smt_Warning);
+
+                return;
+            }
+
+            int successCount = 0;
+            int failedCount = 0;
+
+            foreach (string docEntry in selectedInvoices)
+            {
+                try
+                {
+                    // Get invoice and customer details
+                    SAPbobsCOM.Recordset rs =
+                        (SAPbobsCOM.Recordset)oCompany.GetBusinessObject(
+                            SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+                    if (!int.TryParse(docEntry, out int invoiceDocEntry))
+                        throw new Exception("Invalid invoice DocEntry: " + docEntry);
+
+                    string sql = $@"
+                    SELECT
+                        T0.DocEntry,
+                        T0.DocNum,
+                        T0.CardCode,
+                        T0.CardName,
+                        T1.E_Mail AS EmailAddress,
+                        T0.UserSign,
+                        T0.TaxDate
+                    FROM OINV T0
+                    LEFT JOIN OCRD T1
+                        ON T0.CardCode = T1.CardCode
+                    WHERE T0.DocEntry = {invoiceDocEntry}";
+
+                    rs.DoQuery(sql);
+
+                    if (rs.EoF)
+                        throw new Exception("Invoice not found: " + docEntry);
+
+                    string cardCode = rs.Fields.Item("CardCode").Value.ToString();
+                    string cardName = rs.Fields.Item("CardName").Value.ToString();
+                    string emailAddress = rs.Fields.Item("EmailAddress").Value?.ToString() ?? "";
+                    string docNum = rs.Fields.Item("DocNum").Value.ToString();
+                    string userSign = rs.Fields.Item("UserSign").ToString();
+
+                    string taxDateStr = rs.Fields.Item("TaxDate").ToString();
+
+                    emailAddress = "bacadimas@marsmandrydale.com";
+
+                    if (string.IsNullOrWhiteSpace(emailAddress))
+                    {
+                        throw new Exception(
+                            $"Customer {cardCode} ({cardName}) has no email address.");
+                    }
+
+                    Console.WriteLine($"DocEntry: {docEntry}");
+                    Console.WriteLine($"DocNum: {docNum}");
+                    Console.WriteLine($"CardCode: {cardCode}");
+                    Console.WriteLine($"CardName: {cardName}");
+                    Console.WriteLine($"Email: {emailAddress}");
+
+                    // Generate invoice PDF
+                    var parameterValues = new Dictionary<string, object>
+                {
+                    { "dockey@", docEntry },
+                    { "objectid@", "13" },
+                    { "usercode@", "manager" }
+                };
+
+                    SAPbobsCOM.Recordset oRS = null;
+
+                    string userCode = "";
+                    string userName = "";
+
+                    try
+                    {
+                        oRS = (SAPbobsCOM.Recordset)oCompany.GetBusinessObject(
+                            SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+
+
+                        oRS.DoQuery($@"
+                            SELECT USER_CODE, U_NAME, E_Mail 
+                            FROM OUSR 
+                            WHERE USERID = {userSign}");
+
+                        if (!oRS.EoF)
+                        {
+                            userCode = oRS.Fields.Item("USER_CODE").Value?.ToString() ?? "";
+                            userName = oRS.Fields.Item("U_NAME").Value?.ToString() ?? "";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error getting user info: {ex.Message}");
+                    }
+                    finally
+                    {
+                        if (oRS != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(oRS);
+                    }
+
+                    DateTime taxDate;
+                    bool parsed = DateTime.TryParseExact(
+                        taxDateStr,
+                        "yyyyMMdd",                          // SAP B1 standard format
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None,
+                        out taxDate);
+
+                    if (!parsed)
+                    {
+                        // Fallback: try general parse if the format was different
+                        if (!DateTime.TryParse(taxDateStr, out taxDate))
+                        {
+                            taxDate = DateTime.MinValue;  // or DateTime.Now if you prefer a default
+                            Console.WriteLine($"Warning: Could not parse TaxDate '{taxDateStr}'");
+                        }
+                    }
+
+
+
+                    var reportResult = Program.reportClass.GeneratePdf(
+                        Program.pathReportInvoice,
+                        parameterValues);
+
+                    // Send the PDF
+                    var sendEmail = email.SendEInvoiceAsync(
+                                                reportResult,
+                                                oCompany,
+                                                cardCode,
+                                                userSign,
+                                                docEntry,
+                                                "A/R Invoice").GetAwaiter().GetResult();
+
+                    if (sendEmail.result)
+                    {
+                        Module.SaveEmailLogs(docEntry,
+                                   oCompany,
+                                   SBO_Application,
+                                   cardCode,        // Replace with actual CardCode
+                                   cardName,// Replace with actual CardName
+                                   docNum,    // Replace with actual DocNum
+                                   "13",          // DocType (13 = Invoice)
+                                   "Y",
+                                   userName,
+                                   taxDate,
+                                   "Email Sent Successfully"
+                            );
+                    }
+                    else
+                    {
+                        failedCount++;
+
+                        Console.WriteLine(
+                            $"Failed to send invoice {docNum} to {emailAddress}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    failedCount++;
+
+                    Console.WriteLine(
+                        $"Invoice DocEntry {docEntry}: {ex.Message}");
+                }
+            }
+
+            SBO_Application.MessageBox(
+                $"Email process completed. Sent: {successCount}, Failed: {failedCount}.",
+                1,                                         // 1 = OK button
+                "Auto Email Result");                      // dialog title
+                    }
+                    catch (Exception ex)
+                    {
+                        SBO_Application.MessageBox(
+                            "Error sending invoice: " + ex.Message);
+                    }
+    }
+
     public static void LoadLogs(
     SAPbouiCOM.Form oForm,
     SAPbobsCOM.Company oCompany,
@@ -383,7 +591,7 @@ public static class AddModules
                 SAPbobsCOM.BoObjectTypes.BoRecordset);
 
             var sql = $@"
-            SELECT Code, Name, U_Sent, U_CardCode, U_CardName,
+            SELECT top 100 Code, Name, U_Sent, U_CardCode, U_CardName,
                    U_DocNum, U_DocDate, U_DocType, U_Remarks,
                    U_InvNo, U_UserCode, U_CreatedDate
             FROM [@MDG_EIS_AUTOEMAIL]
@@ -577,7 +785,7 @@ public static class AddModules
 
         // ---- cbSent ----
         oItem = oForm.Items.Add("cbSent", SAPbouiCOM.BoFormItemTypes.it_COMBO_BOX);
-        oItem.Left = 345; oItem.Top = 10; oItem.Width = 80; oItem.Height = 20;
+        oItem.Left = 345; oItem.Top = 10; oItem.Width = 40; oItem.Height = 20;
         oCbo = (SAPbouiCOM.ComboBox)oItem.Specific;
         oCbo.ValidValues.Add("N", "Not Sent");
         oCbo.ValidValues.Add("Y", "Sent");
@@ -585,12 +793,12 @@ public static class AddModules
 
         // ---- lblDocType ----
         oItem = oForm.Items.Add("lblDocType", SAPbouiCOM.BoFormItemTypes.it_STATIC);
-        oItem.Left = 435; oItem.Top = 12; oItem.Width = 60; oItem.Height = 16;
+        oItem.Left = 420; oItem.Top = 12; oItem.Width = 60; oItem.Height = 16;
         ((SAPbouiCOM.StaticText)oItem.Specific).Caption = "Doc Type:";
 
         // ---- cbDocType ----
         oItem = oForm.Items.Add("cbDocType", SAPbouiCOM.BoFormItemTypes.it_COMBO_BOX);
-        oItem.Left = 500; oItem.Top = 10; oItem.Width = 120; oItem.Height = 20;
+        oItem.Left = 450; oItem.Top = 10; oItem.Width = 50; oItem.Height = 20;
         oCbo = (SAPbouiCOM.ComboBox)oItem.Specific;
         oCbo.ValidValues.Add("13", "A/R Invoice");     // 13 = AR Invoice
         oCbo.ValidValues.Add("14", "Credit Memo");     // 14 = AR Credit Memo
@@ -598,8 +806,12 @@ public static class AddModules
 
         // ---- btnSearch ----
         oItem = oForm.Items.Add("btnSearch", SAPbouiCOM.BoFormItemTypes.it_BUTTON);
-        oItem.Left = 690; oItem.Top = 9; oItem.Width = 80; oItem.Height = 22;
+        oItem.Left = 560; oItem.Top = 9; oItem.Width = 80; oItem.Height = 22;
         ((SAPbouiCOM.Button)oItem.Specific).Caption = "Search";
+
+        oItem = oForm.Items.Add("btnSend", SAPbouiCOM.BoFormItemTypes.it_BUTTON);
+        oItem.Left = 800; oItem.Top = 9; oItem.Width = 80; oItem.Height = 22;
+        ((SAPbouiCOM.Button)oItem.Specific).Caption = "Send";
 
         // ---- btnSendEmail (right edge) ----
         /*         oItem = oForm.Items.Add("btnSend", SAPbouiCOM.BoFormItemTypes.it_BUTTON);
@@ -615,17 +827,17 @@ public static class AddModules
         // STEP 4: Static header labels above the matrix
         // No "Code" header (hidden), no "Name" header (removed)
         // ============================================================
-        AddHeaderLabel(oForm, "hSelect", "Select", 10, 40);
-        AddHeaderLabel(oForm, "hSent", "Sent", 50, 40);
-        AddHeaderLabel(oForm, "hCC", "CardCode", 90, 70);
-        AddHeaderLabel(oForm, "hCN", "CardName", 160, 130);
-        AddHeaderLabel(oForm, "hDN", "DocNum", 290, 80);
-        AddHeaderLabel(oForm, "hDD", "DocDate", 370, 80);
-        AddHeaderLabel(oForm, "hDT", "DocType", 450, 100);
-        AddHeaderLabel(oForm, "hIN", "InvNo", 550, 80);
-        AddHeaderLabel(oForm, "hUC", "UserCode", 630, 70);
-        AddHeaderLabel(oForm, "hCD", "Created", 700, 90);
-        AddHeaderLabel(oForm, "hRM", "Remarks", 790, 150);
+        /*   AddHeaderLabel(oForm, "hSelect", "Select", 10, 40);
+          AddHeaderLabel(oForm, "hSent", "Sent", 50, 40);
+          AddHeaderLabel(oForm, "hCC", "CardCode", 90, 70);
+          AddHeaderLabel(oForm, "hCN", "CardName", 160, 130);
+          AddHeaderLabel(oForm, "hDN", "DocNum", 290, 80);
+          AddHeaderLabel(oForm, "hDD", "DocDate", 370, 80);
+          AddHeaderLabel(oForm, "hDT", "DocType", 450, 100);
+          AddHeaderLabel(oForm, "hIN", "InvNo", 550, 80);
+          AddHeaderLabel(oForm, "hUC", "UserCode", 630, 70);
+          AddHeaderLabel(oForm, "hCD", "Created", 700, 90);
+          AddHeaderLabel(oForm, "hRM", "Remarks", 790, 150); */
 
         // ============================================================
         // STEP 5: Add matrix
@@ -643,16 +855,16 @@ public static class AddModules
 
         // ---- Visible columns ----
         AddCheckBoxMatrixColumn(oMtx, "colSelect", "UDS_Select", 40);
-        AddMatrixColumn(oMtx, "colSent", 40, "UDS_Sent");
-        AddMatrixColumn(oMtx, "colCC", 70, "UDS_CC");
-        AddMatrixColumn(oMtx, "colCN", 130, "UDS_CN");
-        AddMatrixColumn(oMtx, "colDN", 80, "UDS_DN");
-        AddMatrixColumn(oMtx, "colDD", 80, "UDS_DD");
-        AddMatrixColumn(oMtx, "colDT", 100, "UDS_DT");
-        AddMatrixColumn(oMtx, "colIN", 80, "UDS_IN");
-        AddMatrixColumn(oMtx, "colUC", 70, "UDS_UC");
-        AddMatrixColumn(oMtx, "colCD", 90, "UDS_CD");
-        AddMatrixColumn(oMtx, "colRM", 150, "UDS_RM");
+        AddMatrixColumn(oMtx, "colSent", 40, "UDS_Sent", "Sent");
+        AddMatrixColumn(oMtx, "colCC", 70, "UDS_CC", "Customer COde");
+        AddMatrixColumn(oMtx, "colCN", 130, "UDS_CN", "Customer Bane");
+        AddMatrixColumn(oMtx, "colDN", 80, "UDS_DN", "Document Entry");
+        AddMatrixColumn(oMtx, "colDD", 80, "UDS_DD", "Document Date");
+        AddMatrixColumn(oMtx, "colDT", 100, "UDS_DT", "Document Type");
+        AddMatrixColumn(oMtx, "colIN", 80, "UDS_IN", "Invoice No");
+        AddMatrixColumn(oMtx, "colUC", 70, "UDS_UC", "Created By");
+        AddMatrixColumn(oMtx, "colCD", 90, "UDS_CD", "Created Date");
+        AddMatrixColumn(oMtx, "colRM", 150, "UDS_RM", "Remarks");
 
         oForm.Freeze(false);
     }
@@ -693,13 +905,16 @@ public static class AddModules
       SAPbouiCOM.Matrix oMtx,
       string colUid,
       int width,
-      string udsName)
+      string udsName,
+      string title)
     {
         SAPbouiCOM.IColumn col = oMtx.Columns.Add(colUid, SAPbouiCOM.BoFormItemTypes.it_EDIT);
 
         col.Width = width;
         col.Editable = false;
         col.Visible = true;
+
+        col.TitleObject.Caption = title;
 
         // ❌ Cannot set col.Title — it's read-only in this SDK
         // ✅ Header text is set via AddHeaderLabel() above the matrix
@@ -708,18 +923,35 @@ public static class AddModules
         col.DataBind.SetBound(true, "", udsName);
     }
 
+    /*   private static void AddHeaderLabel(
+          SAPbouiCOM.Form oForm,
+          string uid,
+          string caption,
+          int left,
+          int width)
+      {
+          SAPbouiCOM.Item oItem = oForm.Items.Add(uid, SAPbouiCOM.BoFormItemTypes.it_STATIC);
+          oItem.Left = left;
+          oItem.Top = 30;      // just above the matrix
+          oItem.Width = width;
+          oItem.Height = 18;
+
+          SAPbouiCOM.StaticText oLbl = (SAPbouiCOM.StaticText)oItem.Specific;
+          oLbl.Caption = caption;
+      } */
+
     private static void AddHeaderLabel(
-        SAPbouiCOM.Form oForm,
-        string uid,
-        string caption,
-        int left,
-        int width)
+    SAPbouiCOM.Form oForm,
+    string uid,
+    string caption,
+    int left,
+    int width)
     {
         SAPbouiCOM.Item oItem = oForm.Items.Add(uid, SAPbouiCOM.BoFormItemTypes.it_STATIC);
         oItem.Left = left;
-        oItem.Top = 30;      // just above the matrix
+        oItem.Top = 28;    // moved up slightly so matrix border doesn't clip it
         oItem.Width = width;
-        oItem.Height = 18;
+        oItem.Height = 16;
 
         SAPbouiCOM.StaticText oLbl = (SAPbouiCOM.StaticText)oItem.Specific;
         oLbl.Caption = caption;
