@@ -98,7 +98,7 @@ class Program
         catch { /* ignore */ }
     }
 
-    static  void SBO_Application_ItemEvent(
+    static void SBO_Application_ItemEvent(
      string FormUID,
      ref SAPbouiCOM.ItemEvent pVal,
      out bool BubbleEvent)
@@ -119,8 +119,20 @@ class Program
             switch (pVal.ItemUID)
             {
                 case "btnSearch":
-                    Console.WriteLine("Search clicked");
-                    AddModules.LoadLogs(oForm, Company, SBO_Application);
+                    try
+                    {
+                        System.Windows.Forms.Cursor.Current =
+                             System.Windows.Forms.Cursors.WaitCursor;
+
+                        Console.WriteLine("Search clicked");
+                        AddModules.LoadLogs(oForm, Company, SBO_Application);
+                    }
+                    finally
+                    {
+                        System.Windows.Forms.Cursor.Current =
+                            System.Windows.Forms.Cursors.Default;
+                    }
+
                     break;
 
                 case "btnClear":
@@ -129,7 +141,38 @@ class Program
                     break;
 
                 case "btnSend":
-                     AddModules.SendInvoiceEmail(oForm, Company, SBO_Application);
+                    int response = SBO_Application.MessageBox(
+                                    "Are you sure you want to send the selected invoice emails?",
+                                    2,
+                                    "Yes",
+                                    "No"
+                                );
+
+                    if (response == 1)
+                    {
+                        try
+                        {
+                            System.Windows.Forms.Cursor.Current =
+                                System.Windows.Forms.Cursors.WaitCursor;
+
+                            SBO_Application.StatusBar.SetText(
+                                "Sending invoice emails, please wait...",
+                                SAPbouiCOM.BoMessageTime.bmt_Long,
+                                SAPbouiCOM.BoStatusBarMessageType.smt_Warning
+                            );
+
+                            AddModules.SendInvoiceEmail(
+                                oForm,
+                                Company,
+                                SBO_Application
+                            );
+                        }
+                        finally
+                        {
+                            System.Windows.Forms.Cursor.Current =
+                                System.Windows.Forms.Cursors.Default;
+                        }
+                    }
                     break;
             }
         }
@@ -152,7 +195,10 @@ class Program
         switch (BusinessObjectInfo.Type)
         {
             case "13":
-                AddModules.AddInvoice(SBO_Application, Company, ref BusinessObjectInfo, reportClass);
+                AddModules.SaveDocument(SBO_Application, Company, ref BusinessObjectInfo, reportClass,"13","A/R Invoice");
+                break;
+            case "14":
+                AddModules.SaveDocument(SBO_Application, Company, ref BusinessObjectInfo, reportClass,"14","A/R Credit Memo");
                 break;
         }
 

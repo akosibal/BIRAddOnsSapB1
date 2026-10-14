@@ -85,6 +85,102 @@ public static class Module
         }
     }
 
+    public static bool UpdateEmailLogs(
+     string newDocEntry,
+     SAPbobsCOM.Company oCompany,
+     SAPbouiCOM.Application sboApplication,
+     string cardCode,
+     string cardName,
+     string docNum,
+     string docType,
+     string sent,
+     string userCOde,
+     DateTime InvoiceDate,
+     string remarks)
+    {
+        SAPbobsCOM.UserTable oUserTable = null;
+        SAPbobsCOM.Recordset rs = null;
+
+        try
+        {
+            oUserTable = oCompany.UserTables.Item("MDG_EIS_AUTOEMAIL");
+
+            rs = (SAPbobsCOM.Recordset)oCompany.GetBusinessObject(
+                SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            string safeDocEntry = newDocEntry.Replace("'", "''");
+
+            rs.DoQuery($@"
+            SELECT TOP 1 Code
+            FROM [@MDG_EIS_AUTOEMAIL]
+            WHERE U_DocNum = '{safeDocEntry}'
+            ORDER BY Code DESC");
+
+            if (rs.EoF)
+            {
+                sboApplication.StatusBar.SetText(
+                    $"No existing email log found for invoice {docNum}.",
+                    SAPbouiCOM.BoMessageTime.bmt_Short,
+                    SAPbouiCOM.BoStatusBarMessageType.smt_Warning);
+
+                return false;
+            }
+
+            string code = rs.Fields.Item("Code").Value.ToString();
+
+            if (!oUserTable.GetByKey(code))
+            {
+                throw new Exception($"Unable to load email log with Code {code}.");
+            }
+
+            // Update existing record fields
+            oUserTable.UserFields.Fields.Item("U_InvNo").Value = docNum;
+            oUserTable.UserFields.Fields.Item("U_Sent").Value = sent;
+            oUserTable.UserFields.Fields.Item("U_CardCode").Value = cardCode;
+            oUserTable.UserFields.Fields.Item("U_CardName").Value = cardName;
+            oUserTable.UserFields.Fields.Item("U_DocNum").Value = newDocEntry;
+            oUserTable.UserFields.Fields.Item("U_DocDate").Value = InvoiceDate;
+            oUserTable.UserFields.Fields.Item("U_DocType").Value = docType;
+            oUserTable.UserFields.Fields.Item("U_Remarks").Value = remarks;
+            oUserTable.UserFields.Fields.Item("U_UserCode").Value = userCOde;
+            oUserTable.UserFields.Fields.Item("U_CreatedDate").Value = DateTime.Today;
+
+            int retCode = oUserTable.Update();
+
+            if (retCode != 0)
+            {
+                oCompany.GetLastError(out int errorCode, out string errMsg);
+                throw new Exception($"SAP error {errorCode}: {errMsg}");
+            }
+
+            sboApplication.StatusBar.SetText(
+                $"Email log updated for invoice {docNum}.",
+                SAPbouiCOM.BoMessageTime.bmt_Short,
+                SAPbouiCOM.BoStatusBarMessageType.smt_Success);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating email log: {ex.Message}");
+
+            sboApplication.StatusBar.SetText(
+                $"Failed to update email log: {ex.Message}",
+                SAPbouiCOM.BoMessageTime.bmt_Short,
+                SAPbouiCOM.BoStatusBarMessageType.smt_Error);
+
+            return false;
+        }
+        finally
+        {
+            if (rs != null)
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(rs);
+
+            if (oUserTable != null)
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(oUserTable);
+        }
+    }
+
 
     public static void AddMenuItems(SAPbouiCOM.Application SBO_Application)
     {

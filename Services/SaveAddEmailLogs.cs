@@ -10,7 +10,12 @@ public static class AddModules
     static SendEmailServices email = new SendEmailServices();
 
 
-    public static void AddInvoice(SAPbouiCOM.Application SBO_Application, SAPbobsCOM.Company Company, ref SAPbouiCOM.BusinessObjectInfo BusinessObjectInfo, ReportClass reportClass)
+    public static void SaveDocument(SAPbouiCOM.Application SBO_Application,
+                                    SAPbobsCOM.Company Company,
+                                    ref SAPbouiCOM.BusinessObjectInfo BusinessObjectInfo,
+                                    ReportClass reportClass,
+                                    string ObjectType,
+                                    string DocumentType)
     {
         string docEntry = string.Empty;
 
@@ -46,8 +51,21 @@ public static class AddModules
 
             Console.WriteLine($"Form Type: {oForm.TypeEx}");
 
-            SAPbouiCOM.DBDataSource oDBDataSource =
-                oForm.DataSources.DBDataSources.Item("OINV");
+            SAPbouiCOM.DBDataSource oDBDataSource = null;
+
+            switch (ObjectType)
+            {
+                case "13":
+                    oDBDataSource = oForm.DataSources.DBDataSources.Item("OINV");
+                    break;
+                case "14":
+                    oDBDataSource = oForm.DataSources.DBDataSources.Item("ORIN");
+                    break;
+            }
+
+
+
+      
 
             if (oDBDataSource == null) { Console.WriteLine("NULL: OINV DataSource"); return; }
 
@@ -132,14 +150,14 @@ public static class AddModules
                 var parameterValues = new Dictionary<string, object>
                 {
                     { "dockey@",  docEntry },
-                    { "objectid@", "13" },
-                    { "usercode@", "bal" },
+                    { "objectid@", ObjectType },
+                    { "usercode@", "manager" },
                 };
 
                 Console.WriteLine($"DocEntry: {docEntry}");
                 var reportReulst = reportClass.GeneratePdf(Program.pathReportInvoice, parameterValues);
 
-                var sendEmail = email.SendEInvoiceAsync(reportReulst, Company, cardCode, userSign, docEntry, "A/R Invoices").GetAwaiter().GetResult();
+                var sendEmail = email.SendEInvoiceAsync(reportReulst, Company, cardCode, userSign, docEntry, DocumentType).GetAwaiter().GetResult();
 
                 if (sendEmail.result)
                 {
@@ -149,12 +167,19 @@ public static class AddModules
                                     cardCode,        // Replace with actual CardCode
                                     cardName,// Replace with actual CardName
                                     InvoiceNo,    // Replace with actual DocNum
-                                    "13",          // DocType (13 = Invoice)
+                                    ObjectType,          // DocType (13 = Invoice)
                                     "Y",
                                     userName,
                                     taxDate,
                                     "Email Sent Successfully"
                              );
+
+
+                    SBO_Application.StatusBar.SetText(
+                                $"Invoice {InvoiceNo}: Email sent successfully.",
+                                SAPbouiCOM.BoMessageTime.bmt_Short,
+                                SAPbouiCOM.BoStatusBarMessageType.smt_Success
+                                );
                 }
                 else
                 {
@@ -167,7 +192,7 @@ public static class AddModules
                                    cardCode,        // Replace with actual CardCode
                                    cardName,// Replace with actual CardName
                                    InvoiceNo,    // Replace with actual DocNum
-                                   "13",          // DocType (13 = Invoice)
+                                   ObjectType,          // DocType (13 = Invoice)
                                    "N",
                                    userName,
                                    taxDate,
@@ -387,9 +412,9 @@ public static class AddModules
                     string cardName = rs.Fields.Item("CardName").Value.ToString();
                     string emailAddress = rs.Fields.Item("EmailAddress").Value?.ToString() ?? "";
                     string docNum = rs.Fields.Item("DocNum").Value.ToString();
-                    string userSign = rs.Fields.Item("UserSign").ToString();
+                    string userSign = rs.Fields.Item("UserSign").Value.ToString();
 
-                    string taxDateStr = rs.Fields.Item("TaxDate").ToString();
+                    string taxDateStr = rs.Fields.Item("TaxDate").Value.ToString();
 
                     emailAddress = "bacadimas@marsmandrydale.com";
 
@@ -480,7 +505,7 @@ public static class AddModules
 
                     if (sendEmail.result)
                     {
-                        Module.SaveEmailLogs(docEntry,
+                        Module.UpdateEmailLogs(docEntry,
                                    oCompany,
                                    SBO_Application,
                                    cardCode,        // Replace with actual CardCode
@@ -492,13 +517,41 @@ public static class AddModules
                                    taxDate,
                                    "Email Sent Successfully"
                             );
+
+                        SBO_Application.StatusBar.SetText(
+                                    $"Invoice {docNum}: Email sent successfully.",
+                                    SAPbouiCOM.BoMessageTime.bmt_Short,
+                                    SAPbouiCOM.BoStatusBarMessageType.smt_Success
+                                    );
+
+                        successCount++;
+
+                        AddModules.ShowAutoEmailForm(SBO_Application, oCompany);
+
                     }
                     else
                     {
+                        Module.UpdateEmailLogs(docEntry,
+                                   oCompany,
+                                   SBO_Application,
+                                   cardCode,        // Replace with actual CardCode
+                                   cardName,// Replace with actual CardName
+                                   docNum,    // Replace with actual DocNum
+                                   "13",          // DocType (13 = Invoice)
+                                   "N",
+                                   userName,
+                                   taxDate,
+                                   sendEmail.message
+                            );
+
                         failedCount++;
 
-                        Console.WriteLine(
-                            $"Failed to send invoice {docNum} to {emailAddress}");
+                        SBO_Application.StatusBar.SetText(
+                            $"Invoice {docNum}: Failed to send email. {sendEmail.message}",
+                            SAPbouiCOM.BoMessageTime.bmt_Short,
+                            SAPbouiCOM.BoStatusBarMessageType.smt_Error
+                        );
+
                     }
                 }
                 catch (Exception ex)
@@ -514,12 +567,12 @@ public static class AddModules
                 $"Email process completed. Sent: {successCount}, Failed: {failedCount}.",
                 1,                                         // 1 = OK button
                 "Auto Email Result");                      // dialog title
-                    }
-                    catch (Exception ex)
-                    {
-                        SBO_Application.MessageBox(
-                            "Error sending invoice: " + ex.Message);
-                    }
+        }
+        catch (Exception ex)
+        {
+            SBO_Application.MessageBox(
+                "Error sending invoice: " + ex.Message);
+        }
     }
 
     public static void LoadLogs(
@@ -798,7 +851,7 @@ public static class AddModules
 
         // ---- cbDocType ----
         oItem = oForm.Items.Add("cbDocType", SAPbouiCOM.BoFormItemTypes.it_COMBO_BOX);
-        oItem.Left = 450; oItem.Top = 10; oItem.Width = 50; oItem.Height = 20;
+        oItem.Left = 480; oItem.Top = 10; oItem.Width = 50; oItem.Height = 20;
         oCbo = (SAPbouiCOM.ComboBox)oItem.Specific;
         oCbo.ValidValues.Add("13", "A/R Invoice");     // 13 = AR Invoice
         oCbo.ValidValues.Add("14", "Credit Memo");     // 14 = AR Credit Memo
@@ -806,7 +859,7 @@ public static class AddModules
 
         // ---- btnSearch ----
         oItem = oForm.Items.Add("btnSearch", SAPbouiCOM.BoFormItemTypes.it_BUTTON);
-        oItem.Left = 560; oItem.Top = 9; oItem.Width = 80; oItem.Height = 22;
+        oItem.Left = 610; oItem.Top = 9; oItem.Width = 80; oItem.Height = 22;
         ((SAPbouiCOM.Button)oItem.Specific).Caption = "Search";
 
         oItem = oForm.Items.Add("btnSend", SAPbouiCOM.BoFormItemTypes.it_BUTTON);

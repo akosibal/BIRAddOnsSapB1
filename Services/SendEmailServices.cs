@@ -16,6 +16,7 @@ public class SendEmailServices
      string CardCode,
      string userSign,
      string docEntry,
+     string ObjectType,
      string docType = "Electronic Sales Invoice")
     {
         SAPbobsCOM.BusinessPartners oBP = null;
@@ -37,6 +38,34 @@ public class SendEmailServices
 
         try
         {
+
+            oRS = (SAPbobsCOM.Recordset)oCompany.GetBusinessObject(
+                        SAPbobsCOM.BoObjectTypes.BoRecordset);
+
+            oRS.DoQuery(@"
+                    SELECT 
+                        CompnyName,
+                        Phone1,
+                        Phone2,
+                        Fax,
+                        E_Mail,
+                        CompnyAddr,
+                        State,
+                        Country
+                    FROM OADM");
+
+            if (!oRS.EoF)
+            {
+                companyName = oRS.Fields.Item("CompnyName").Value?.ToString() ?? "";
+                companyContact = oRS.Fields.Item("Phone1").Value?.ToString() ?? "";
+
+                // Optional fallback to Phone2 if Phone1 is empty
+                if (string.IsNullOrWhiteSpace(companyContact))
+                {
+                    companyContact = oRS.Fields.Item("Phone2").Value?.ToString() ?? "";
+                }
+            }
+
             // ============================
             // 1. Customer (email + name) from OCRD
             // ============================
@@ -71,20 +100,44 @@ public class SendEmailServices
             oRS = (SAPbobsCOM.Recordset)oCompany.GetBusinessObject(
                 SAPbobsCOM.BoObjectTypes.BoRecordset);
 
-            oRS.DoQuery($@"
-            SELECT 
-                T0.DocNum,
-                T0.DocDate,
-                T0.DocDueDate,
-                T0.DocTotal,
-                T0.DocCur,
-                T0.PaymentRef,
-                T1.PymntGroup AS PaymentTerms,
-                T0.UserSign,
-                T0.NumAtCard
-            FROM OINV T0
-            LEFT JOIN OCTG T1 ON T0.GroupNum = T1.GroupNum
-            WHERE T0.DocEntry = {docEntry}");
+            switch (ObjectType)
+            {
+                case "13":   // A/R Invoice
+                    oRS.DoQuery($@"
+                                SELECT 
+                                    T0.DocNum,
+                                    T0.DocDate,
+                                    T0.DocDueDate,
+                                    T0.DocTotal,
+                                    T0.DocCur,
+                                    T0.PaymentRef,
+                                    T1.PymntGroup AS PaymentTerms,
+                                    T0.UserSign,
+                                    T0.NumAtCard
+                                FROM OINV T0
+                                LEFT JOIN OCTG T1 ON T0.GroupNum = T1.GroupNum
+                                WHERE T0.DocEntry = {docEntry}");
+                    break;
+
+                case "14":   // A/R Credit Memo
+                    oRS.DoQuery($@"
+                                SELECT 
+                                    T0.DocNum,
+                                    T0.DocDate,
+                                    T0.DocDueDate,
+                                    T0.DocTotal,
+                                    T0.DocCur,
+                                    T0.PaymentRef,
+                                    T1.PymntGroup AS PaymentTerms,
+                                    T0.UserSign,
+                                    T0.NumAtCard
+                                FROM ORIN T0
+                                LEFT JOIN OCTG T1 ON T0.GroupNum = T1.GroupNum
+                                WHERE T0.DocEntry = {docEntry}");
+                    break;
+            }
+
+
 
             if (!oRS.EoF)
             {
@@ -137,6 +190,13 @@ public class SendEmailServices
         // 4. Subject (new format)
         // ============================
         var subject = $"NO Reply {companyName}_{docType}_{docNum}";
+        var documentName = ObjectType switch
+                        {
+                            "13" => "Invoice No",
+                            "14" => "Credit Memo No",
+                            _ => "Document No"
+                        };
+
 
         // ============================
         // 5. Body (new template)
@@ -151,21 +211,12 @@ public class SendEmailServices
             <tr>
                 <td align='center' style='padding:20px;'>
                     <table width='900' cellpadding='0' cellspacing='0' style='background:#ffffff;'>
-
-                        <!-- HEADER -->
-                        <tr>
-                            <td style='background:#EF9F2E; padding:8px 12px;'>
-                                <span style='color:#ffffff; font-size:26px; font-weight:bold;'>
-                                    {CultureInfo.CurrentCulture.TextInfo.ToTitleCase(companyName)} - {docType}
-                                </span>
-                            </td>
-                        </tr>
-
+                
                         <!-- CONTENT -->
                         <tr>
                             <td style='padding:16px 20px; color:#333333; font-size:18px;'>
 
-                                <p style='margin:0 0 14px;'>Dear {customerName},</p>
+                                <p style='margin:0 0 14px;'>Dear {CultureInfo.CurrentCulture.TextInfo.ToTitleCase(customerName.ToLower())},</p>
 
                                 <p style='margin:0 0 18px;'>
                                     Please see attached {docType} No. <strong>{docNum}</strong> 
@@ -178,7 +229,7 @@ public class SendEmailServices
                                     style='background:#f7f7f7; border-left:5px solid #198754; margin-bottom:18px;'>
                                     <tr>
                                         <td style='padding:12px 16px;'>
-                                            <p style='margin:4px 0;'><strong>Invoice Number:</strong> {docNum}</p>
+                                            <p style='margin:4px 0;'><strong>{documentName}:</strong> {docNum}</p>
                                             <p style='margin:4px 0;'><strong>Total Amount:</strong> {currency} {totalAmount}</p>
                                             <p style='margin:4px 0;'><strong>Payment Due Date:</strong> {dueDate}</p>
                                             <p style='margin:4px 0;'><strong>Payment Terms:</strong> {paymentTerms}</p>
