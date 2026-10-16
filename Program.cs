@@ -11,11 +11,7 @@ class Program
     static SendEmailServices email = new SendEmailServices();
 
     public static ReportClass reportClass = new ReportClass("192.168.5.22", "TEST_MDTI_20260732", "sa", "1q2w#E$R");
-    public static string pathReportInvoice = Path.Combine(
-                  AppContext.BaseDirectory,
-                  "Reports",
-                  "Invoice.rpt"
-              );
+    public static string pathReportTemplates { get; set; } = "";
 
 
     static void Main(string[] args)
@@ -174,6 +170,26 @@ class Program
                         }
                     }
                     break;
+
+                case "btnExport":
+                    try
+                    {
+                        var filters = AddModules.GetExportFilters(oForm);
+
+                        /*   ExportLogsToExcel(
+            filters.FromDate,
+            filters.ToDate,
+            filters.Sent,
+            filters.DocType); */
+                    }
+                    catch (Exception ex)
+                    {
+                        SBO_Application.StatusBar.SetText(
+                            "Excel export failed: " + ex.Message,
+                            SAPbouiCOM.BoMessageTime.bmt_Long,
+                            SAPbouiCOM.BoStatusBarMessageType.smt_Error);
+                    }
+                    break;
             }
         }
         catch (Exception ex)
@@ -195,10 +211,20 @@ class Program
         switch (BusinessObjectInfo.Type)
         {
             case "13":
-                AddModules.SaveDocument(SBO_Application, Company, ref BusinessObjectInfo, reportClass,"13","A/R Invoice");
+                pathReportTemplates = Path.Combine(
+                      AppContext.BaseDirectory,
+                      "Reports",
+                      "Invoice.rpt"
+                  );
+                AddModules.SaveDocument(SBO_Application, Company, ref BusinessObjectInfo, reportClass, "13", "A/R Invoice");
                 break;
             case "14":
-                AddModules.SaveDocument(SBO_Application, Company, ref BusinessObjectInfo, reportClass,"14","A/R Credit Memo");
+                pathReportTemplates = Path.Combine(
+                     AppContext.BaseDirectory,
+                     "Reports",
+                     "CreditMemo.rpt"
+                 );
+                AddModules.SaveDocument(SBO_Application, Company, ref BusinessObjectInfo, reportClass, "14", "A/R Credit Memo");
                 break;
         }
 

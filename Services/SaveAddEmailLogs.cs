@@ -65,7 +65,7 @@ public static class AddModules
 
 
 
-      
+
 
             if (oDBDataSource == null) { Console.WriteLine("NULL: OINV DataSource"); return; }
 
@@ -155,9 +155,9 @@ public static class AddModules
                 };
 
                 Console.WriteLine($"DocEntry: {docEntry}");
-                var reportReulst = reportClass.GeneratePdf(Program.pathReportInvoice, parameterValues);
+                var reportReulst = reportClass.GeneratePdf(Program.pathReportTemplates, parameterValues);
 
-                var sendEmail = email.SendEInvoiceAsync(reportReulst, Company, cardCode, userSign, docEntry, DocumentType).GetAwaiter().GetResult();
+                var sendEmail = email.SendEInvoiceAsync(reportReulst, Company, cardCode, userSign, docEntry, ObjectType, DocumentType).GetAwaiter().GetResult();
 
                 if (sendEmail.result)
                 {
@@ -270,9 +270,9 @@ public static class AddModules
             oForm.Left = 200;
             oForm.Top = 100;
             oForm.Width = 900;
-            oForm.Height = 560;
+            oForm.Height = 600;
             oForm.ClientWidth = 890;
-            oForm.ClientHeight = 540;
+            oForm.ClientHeight = 560;
             oForm.Visible = false;  // set visible after building
 
             // 4. Add items
@@ -338,6 +338,10 @@ public static class AddModules
      SAPbobsCOM.Company oCompany,
      SAPbouiCOM.Application SBO_Application)
     {
+
+        string ObjType = "";
+        string DocumentType = "";
+
         try
         {
             SAPbouiCOM.Matrix oMatrix =
@@ -358,7 +362,17 @@ public static class AddModules
                     (SAPbouiCOM.EditText)oMatrix.Columns
                         .Item("colDN").Cells.Item(i).Specific;
 
+
+
                 string docEntry = txt.Value.Trim();
+
+
+                SAPbouiCOM.EditText txtObjType =
+                  (SAPbouiCOM.EditText)oMatrix.Columns
+                      .Item("colDT").Cells.Item(i).Specific;
+
+                ObjType = txtObjType.Value.Trim();
+
 
                 if (!string.IsNullOrEmpty(docEntry))
                     selectedInvoices.Add(docEntry);
@@ -389,19 +403,60 @@ public static class AddModules
                     if (!int.TryParse(docEntry, out int invoiceDocEntry))
                         throw new Exception("Invalid invoice DocEntry: " + docEntry);
 
-                    string sql = $@"
-                    SELECT
-                        T0.DocEntry,
-                        T0.DocNum,
-                        T0.CardCode,
-                        T0.CardName,
-                        T1.E_Mail AS EmailAddress,
-                        T0.UserSign,
-                        T0.TaxDate
-                    FROM OINV T0
-                    LEFT JOIN OCRD T1
-                        ON T0.CardCode = T1.CardCode
-                    WHERE T0.DocEntry = {invoiceDocEntry}";
+                    string sql = "";
+
+                    switch (ObjType)
+                    {
+                        case "13":
+
+                            DocumentType = "A/R Invoice";
+
+                            Program.pathReportTemplates = Path.Combine(
+                                              AppContext.BaseDirectory,
+                                              "Reports",
+                                              "Invoice.rpt");
+
+                            sql = $@"
+                                SELECT
+                                    T0.DocEntry,
+                                    T0.DocNum,
+                                    T0.CardCode,
+                                    T0.CardName,
+                                    T1.E_Mail AS EmailAddress,
+                                    T0.UserSign,
+                                    T0.TaxDate
+                                FROM OINV T0
+                                LEFT JOIN OCRD T1
+                                    ON T0.CardCode = T1.CardCode
+                                WHERE T0.DocEntry = {invoiceDocEntry}";
+                            break;
+
+                        case "14":
+
+                            DocumentType = "A/R CreditMemo";
+
+                            Program.pathReportTemplates = Path.Combine(
+                                                 AppContext.BaseDirectory,
+                                                 "Reports",
+                                                 "CreditMemo.rpt"
+                                             );
+
+                            sql = $@"
+                                SELECT
+                                    T0.DocEntry,
+                                    T0.DocNum,
+                                    T0.CardCode,
+                                    T0.CardName,
+                                    T1.E_Mail AS EmailAddress,
+                                    T0.UserSign,
+                                    T0.TaxDate
+                                FROM ORIN T0
+                                LEFT JOIN OCRD T1
+                                    ON T0.CardCode = T1.CardCode
+                                WHERE T0.DocEntry = {invoiceDocEntry}";
+
+                            break;
+                    }
 
                     rs.DoQuery(sql);
 
@@ -432,11 +487,11 @@ public static class AddModules
 
                     // Generate invoice PDF
                     var parameterValues = new Dictionary<string, object>
-                {
-                    { "dockey@", docEntry },
-                    { "objectid@", "13" },
-                    { "usercode@", "manager" }
-                };
+                                                {
+                                                    { "dockey@", docEntry },
+                                                    { "objectid@", "13" },
+                                                    { "usercode@", "manager" }
+                                                };
 
                     SAPbobsCOM.Recordset oRS = null;
 
@@ -472,11 +527,11 @@ public static class AddModules
 
                     DateTime taxDate;
                     bool parsed = DateTime.TryParseExact(
-                        taxDateStr,
-                        "yyyyMMdd",                          // SAP B1 standard format
-                        System.Globalization.CultureInfo.InvariantCulture,
-                        System.Globalization.DateTimeStyles.None,
-                        out taxDate);
+                                                        taxDateStr,
+                                                        "yyyyMMdd",                          // SAP B1 standard format
+                                                        System.Globalization.CultureInfo.InvariantCulture,
+                                                        System.Globalization.DateTimeStyles.None,
+                                                        out taxDate);
 
                     if (!parsed)
                     {
@@ -491,7 +546,7 @@ public static class AddModules
 
 
                     var reportResult = Program.reportClass.GeneratePdf(
-                        Program.pathReportInvoice,
+                        Program.pathReportTemplates,
                         parameterValues);
 
                     // Send the PDF
@@ -501,7 +556,8 @@ public static class AddModules
                                                 cardCode,
                                                 userSign,
                                                 docEntry,
-                                                "A/R Invoice").GetAwaiter().GetResult();
+                                                ObjType,
+                                                DocumentType).GetAwaiter().GetResult();
 
                     if (sendEmail.result)
                     {
@@ -511,7 +567,7 @@ public static class AddModules
                                    cardCode,        // Replace with actual CardCode
                                    cardName,// Replace with actual CardName
                                    docNum,    // Replace with actual DocNum
-                                   "13",          // DocType (13 = Invoice)
+                                   ObjType,          // DocType (13 = Invoice)
                                    "Y",
                                    userName,
                                    taxDate,
@@ -519,7 +575,7 @@ public static class AddModules
                             );
 
                         SBO_Application.StatusBar.SetText(
-                                    $"Invoice {docNum}: Email sent successfully.",
+                                    $"Document No {docNum}: Email sent successfully.",
                                     SAPbouiCOM.BoMessageTime.bmt_Short,
                                     SAPbouiCOM.BoStatusBarMessageType.smt_Success
                                     );
@@ -537,7 +593,7 @@ public static class AddModules
                                    cardCode,        // Replace with actual CardCode
                                    cardName,// Replace with actual CardName
                                    docNum,    // Replace with actual DocNum
-                                   "13",          // DocType (13 = Invoice)
+                                   ObjType,          // DocType (13 = Invoice)
                                    "N",
                                    userName,
                                    taxDate,
@@ -547,7 +603,7 @@ public static class AddModules
                         failedCount++;
 
                         SBO_Application.StatusBar.SetText(
-                            $"Invoice {docNum}: Failed to send email. {sendEmail.message}",
+                            $"Document No {docNum}: Failed to send email. {sendEmail.message}",
                             SAPbouiCOM.BoMessageTime.bmt_Short,
                             SAPbouiCOM.BoStatusBarMessageType.smt_Error
                         );
@@ -866,35 +922,7 @@ public static class AddModules
         oItem.Left = 800; oItem.Top = 9; oItem.Width = 80; oItem.Height = 22;
         ((SAPbouiCOM.Button)oItem.Specific).Caption = "Send";
 
-        // ---- btnSendEmail (right edge) ----
-        /*         oItem = oForm.Items.Add("btnSend", SAPbouiCOM.BoFormItemTypes.it_BUTTON);
-                oItem.Left = 720; oItem.Top = 9; oItem.Width = 100; oItem.Height = 22;
-                ((SAPbouiCOM.Button)oItem.Specific).Caption = "Send"; */
 
-        // ---- btnClear ----
-        /*   oItem = oForm.Items.Add("btnClear", SAPbouiCOM.BoFormItemTypes.it_BUTTON);
-          oItem.Left = 530; oItem.Top = 9; oItem.Width = 80; oItem.Height = 22;
-          ((SAPbouiCOM.Button)oItem.Specific).Caption = "Clear"; */
-
-        // ============================================================
-        // STEP 4: Static header labels above the matrix
-        // No "Code" header (hidden), no "Name" header (removed)
-        // ============================================================
-        /*   AddHeaderLabel(oForm, "hSelect", "Select", 10, 40);
-          AddHeaderLabel(oForm, "hSent", "Sent", 50, 40);
-          AddHeaderLabel(oForm, "hCC", "CardCode", 90, 70);
-          AddHeaderLabel(oForm, "hCN", "CardName", 160, 130);
-          AddHeaderLabel(oForm, "hDN", "DocNum", 290, 80);
-          AddHeaderLabel(oForm, "hDD", "DocDate", 370, 80);
-          AddHeaderLabel(oForm, "hDT", "DocType", 450, 100);
-          AddHeaderLabel(oForm, "hIN", "InvNo", 550, 80);
-          AddHeaderLabel(oForm, "hUC", "UserCode", 630, 70);
-          AddHeaderLabel(oForm, "hCD", "Created", 700, 90);
-          AddHeaderLabel(oForm, "hRM", "Remarks", 790, 150); */
-
-        // ============================================================
-        // STEP 5: Add matrix
-        // ============================================================
         oItem = oForm.Items.Add("mtxLogs", SAPbouiCOM.BoFormItemTypes.it_MATRIX);
         oItem.Left = 10; oItem.Top = 52;
         oItem.Width = 900; oItem.Height = 460;
@@ -920,6 +948,18 @@ public static class AddModules
         AddMatrixColumn(oMtx, "colRM", 150, "UDS_RM", "Remarks");
 
         oForm.Freeze(false);
+
+        oItem = oForm.Items.Add(
+    "btnExport",
+    SAPbouiCOM.BoFormItemTypes.it_BUTTON);
+
+        oItem.Left = 780;     // Align to the right
+        oItem.Top = 520;       // Below the matrix (52 + 460 = 512)
+        oItem.Width = 100;
+        oItem.Height = 25;
+
+        ((SAPbouiCOM.Button)oItem.Specific).Caption = "Export Excel";
+
     }
 
     private static void AddHiddenMatrixColumn(
@@ -976,38 +1016,23 @@ public static class AddModules
         col.DataBind.SetBound(true, "", udsName);
     }
 
-    /*   private static void AddHeaderLabel(
-          SAPbouiCOM.Form oForm,
-          string uid,
-          string caption,
-          int left,
-          int width)
-      {
-          SAPbouiCOM.Item oItem = oForm.Items.Add(uid, SAPbouiCOM.BoFormItemTypes.it_STATIC);
-          oItem.Left = left;
-          oItem.Top = 30;      // just above the matrix
-          oItem.Width = width;
-          oItem.Height = 18;
-
-          SAPbouiCOM.StaticText oLbl = (SAPbouiCOM.StaticText)oItem.Specific;
-          oLbl.Caption = caption;
-      } */
-
-    private static void AddHeaderLabel(
-    SAPbouiCOM.Form oForm,
-    string uid,
-    string caption,
-    int left,
-    int width)
+    public static (string FromDate, string ToDate,
+                string Sent, string DocType)
+    GetExportFilters(SAPbouiCOM.Form oForm)
     {
-        SAPbouiCOM.Item oItem = oForm.Items.Add(uid, SAPbouiCOM.BoFormItemTypes.it_STATIC);
-        oItem.Left = left;
-        oItem.Top = 28;    // moved up slightly so matrix border doesn't clip it
-        oItem.Width = width;
-        oItem.Height = 16;
+        string fromDate = oForm.DataSources.UserDataSources
+            .Item("UDS_FROM").ValueEx;
 
-        SAPbouiCOM.StaticText oLbl = (SAPbouiCOM.StaticText)oItem.Specific;
-        oLbl.Caption = caption;
+        string toDate = oForm.DataSources.UserDataSources
+            .Item("UDS_TO").ValueEx;
+
+        string sent = ((SAPbouiCOM.ComboBox)
+            oForm.Items.Item("cbSent").Specific).Value;
+
+        string docType = ((SAPbouiCOM.ComboBox)
+            oForm.Items.Item("cbDocType").Specific).Value;
+
+        return (fromDate, toDate, sent, docType);
     }
 
 }

@@ -201,7 +201,7 @@ public static class Module
             oFolder.Type = SAPbouiCOM.BoMenuType.mt_POPUP;   // ← folder, not string
             oFolder.UniqueID = "MNU_MARSMAN_ROOT";
             oFolder.String = "Marsman Tools";
-            oFolder.Position = 0;   // after all default folders
+            oFolder.Position = 0;  
 
             // Attach at the TOP level of Main Menu
             oMenuItem = oMenus.Item("43520");   // Modules / Main Menu root
