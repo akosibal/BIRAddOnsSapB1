@@ -174,13 +174,44 @@ class Program
                 case "btnExport":
                     try
                     {
+                        System.Windows.Forms.Cursor.Current = System.Windows.Forms.Cursors.WaitCursor;
+                        SBO_Application.StatusBar.SetText("Exporting to Excel, please wait...",
+                            SAPbouiCOM.BoMessageTime.bmt_Short,
+                            SAPbouiCOM.BoStatusBarMessageType.smt_Warning);
+
+                        // 1. Get the string filters from the SAP Form
                         var filters = AddModules.GetExportFilters(oForm);
 
-                        /*   ExportLogsToExcel(
-            filters.FromDate,
-            filters.ToDate,
-            filters.Sent,
-            filters.DocType); */
+                        DateTime dtFrom = DateTime.MinValue;
+                        DateTime dtTo = DateTime.MinValue;
+
+                        // 2. Safely convert the strings to DateTime
+                        // (Only parse if the string is not empty)
+                        if (!string.IsNullOrEmpty(filters.FromDate))
+                        {
+                            DateTime.TryParseExact(filters.FromDate, "yyyyMMdd",
+                                System.Globalization.CultureInfo.InvariantCulture,
+                                System.Globalization.DateTimeStyles.None,
+                                out dtFrom);
+                        }
+
+                        if (!string.IsNullOrEmpty(filters.ToDate))
+                        {
+                            DateTime.TryParseExact(filters.ToDate, "yyyyMMdd",
+                                System.Globalization.CultureInfo.InvariantCulture,
+                                System.Globalization.DateTimeStyles.None,
+                                out dtTo);
+                        }
+
+                        // 3. Call the exporter
+                        ExcelExporter.ExportToExcel(
+                            Company,
+                            SBO_Application,
+                            dtFrom,
+                            dtTo,
+                            filters.Sent,
+                            filters.DocType
+                        );
                     }
                     catch (Exception ex)
                     {
@@ -188,6 +219,11 @@ class Program
                             "Excel export failed: " + ex.Message,
                             SAPbouiCOM.BoMessageTime.bmt_Long,
                             SAPbouiCOM.BoStatusBarMessageType.smt_Error);
+                    }
+                    finally
+                    {
+                        // 5. ALWAYS reset the cursor back to default
+                        System.Windows.Forms.Cursor.Current = System.Windows.Forms.Cursors.Default;
                     }
                     break;
             }

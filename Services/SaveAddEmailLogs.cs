@@ -369,7 +369,7 @@ public static class AddModules
 
                 SAPbouiCOM.EditText txtObjType =
                   (SAPbouiCOM.EditText)oMatrix.Columns
-                      .Item("colDT").Cells.Item(i).Specific;
+                      .Item("colOT").Cells.Item(i).Specific;
 
                 ObjType = txtObjType.Value.Trim();
 
@@ -752,6 +752,7 @@ public static class AddModules
                 uds.Item("UDS_UC").Value = GetStr(oRS, "U_UserCode");
                 uds.Item("UDS_CD").Value = GetStr(oRS, "U_CreatedDate");
                 uds.Item("UDS_RM").Value = GetStr(oRS, "U_Remarks");
+                uds.Item("UDS_OT").Value = GetStr(oRS, "U_DocType");
 
                 // 3️⃣ Push UDS values into the visible row
                 oMtx.SetLineData(row);
@@ -860,6 +861,7 @@ public static class AddModules
         udsc.Add("UDS_UC", SAPbouiCOM.BoDataType.dt_SHORT_TEXT, 254);
         udsc.Add("UDS_CD", SAPbouiCOM.BoDataType.dt_SHORT_TEXT, 254);
         udsc.Add("UDS_RM", SAPbouiCOM.BoDataType.dt_SHORT_TEXT, 254);
+        udsc.Add("UDS_OT", SAPbouiCOM.BoDataType.dt_SHORT_TEXT, 2);
 
         // ============================================================
         // STEP 3: Filter labels and fields
@@ -918,9 +920,7 @@ public static class AddModules
         oItem.Left = 610; oItem.Top = 9; oItem.Width = 80; oItem.Height = 22;
         ((SAPbouiCOM.Button)oItem.Specific).Caption = "Search";
 
-        oItem = oForm.Items.Add("btnSend", SAPbouiCOM.BoFormItemTypes.it_BUTTON);
-        oItem.Left = 800; oItem.Top = 9; oItem.Width = 80; oItem.Height = 22;
-        ((SAPbouiCOM.Button)oItem.Specific).Caption = "Send";
+
 
 
         oItem = oForm.Items.Add("mtxLogs", SAPbouiCOM.BoFormItemTypes.it_MATRIX);
@@ -946,8 +946,14 @@ public static class AddModules
         AddMatrixColumn(oMtx, "colUC", 70, "UDS_UC", "Created By");
         AddMatrixColumn(oMtx, "colCD", 90, "UDS_CD", "Created Date");
         AddMatrixColumn(oMtx, "colRM", 150, "UDS_RM", "Remarks");
+        AddMatrixColumn(oMtx, "colOT", 0, "UDS_OT", "");
 
         oForm.Freeze(false);
+
+        oItem = oForm.Items.Add("btnSend", SAPbouiCOM.BoFormItemTypes.it_BUTTON);
+        oItem.Left = 10; oItem.Top = 520; oItem.Width = 80; oItem.Height = 22;
+        ((SAPbouiCOM.Button)oItem.Specific).Caption = "Send";
+
 
         oItem = oForm.Items.Add(
     "btnExport",
