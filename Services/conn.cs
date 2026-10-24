@@ -24,14 +24,14 @@ public class Conn
             // Get SAP Business One application
             SBO_Application = sboGuiApi.GetApplication(-1);
 
-            Console.WriteLine("Connected to SAP Business One UI API.");
+           // Console.WriteLine("Connected to SAP Business One UI API.");
 
             // Get DI API company from UI API
             company = (SAPbobsCOM.Company)SBO_Application.Company.GetDICompany();
 
-            Console.WriteLine(
+          /*   Console.WriteLine(
                 $"Connected to SAP Business One DI API: {company.CompanyName}"
-            );
+            ); */
         }
         catch (Exception ex)
         {

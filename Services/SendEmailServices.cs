@@ -33,8 +33,10 @@ public class SendEmailServices
         string totalAmount = "";
         string paymentTerms = "";
         string userName = "";
-        string companyName = "MEPI";           // change or pull from OADM
-        string companyContact = "123-4567";       // change or pull from config
+        string companyName = "MEPI";
+        string companyContact = "123-4567";
+        string orginalInvoice = "";
+        string remarks = "";
 
         try
         {
@@ -113,7 +115,9 @@ public class SendEmailServices
                                     T0.PaymentRef,
                                     T1.PymntGroup AS PaymentTerms,
                                     T0.UserSign,
-                                    T0.NumAtCard
+                                    T0.NumAtCard,
+                                    NULL OriginalInvoiceNo,
+                                    T0.Comments
                                 FROM OINV T0
                                 LEFT JOIN OCTG T1 ON T0.GroupNum = T1.GroupNum
                                 WHERE T0.DocEntry = {docEntry}");
@@ -121,7 +125,7 @@ public class SendEmailServices
 
                 case "14":   // A/R Credit Memo
                     oRS.DoQuery($@"
-                                SELECT 
+                                SELECT distinct
                                     T0.DocNum,
                                     T0.DocDate,
                                     T0.DocDueDate,
@@ -130,8 +134,14 @@ public class SendEmailServices
                                     T0.PaymentRef,
                                     T1.PymntGroup AS PaymentTerms,
                                     T0.UserSign,
-                                    T0.NumAtCard
+                                    T0.NumAtCard,
+                                    INV.DocNum AS OriginalInvoiceNo,
+                                    T0.Comments
                                 FROM ORIN T0
+                                INNER JOIN RIN1 CM_LINE
+                                        ON T0.DocEntry = CM_LINE.DocEntry
+                                    LEFT JOIN OINV INV
+                                        ON CM_LINE.BaseEntry = INV.DocEntry                              
                                 LEFT JOIN OCTG T1 ON T0.GroupNum = T1.GroupNum
                                 WHERE T0.DocEntry = {docEntry}");
                     break;
@@ -148,6 +158,8 @@ public class SendEmailServices
                 totalAmount = Convert.ToDecimal(oRS.Fields.Item("DocTotal").Value).ToString("N2");
                 paymentTerms = oRS.Fields.Item("PaymentTerms").Value?.ToString() ?? "";
                 docNum = oRS.Fields.Item("DocNum").Value?.ToString() ?? "";
+                orginalInvoice = oRS.Fields.Item("OriginalInvoiceNo").Value?.ToString() ?? "";
+                remarks = oRS.Fields.Item("Comments").Value?.ToString() ?? "";
             }
 
             // ============================
@@ -191,11 +203,11 @@ public class SendEmailServices
         // ============================
         var subject = $"NO Reply {companyName}_{docType}_{docNum}";
         var documentName = ObjectType switch
-                        {
-                            "13" => "Invoice No",
-                            "14" => "Credit Memo No",
-                            _ => "Document No"
-                        };
+        {
+            "13" => "Invoice No",
+            "14" => "Credit Memo No",
+            _ => "Document No"
+        };
 
 
         // ============================
@@ -218,28 +230,7 @@ public class SendEmailServices
 
                                 <p style='margin:0 0 14px;'>Dear {CultureInfo.CurrentCulture.TextInfo.ToTitleCase(customerName.ToLower())},</p>
 
-                                <p style='margin:0 0 18px;'>
-                                    Please see attached {docType} No. <strong>{docNum}</strong> 
-                                    for the products or services dated <strong>{docDate}</strong> 
-                                    with the following details:
-                                </p>
-
-                                <!-- INFO BOX -->
-                                <table width='100%' cellpadding='0' cellspacing='0'
-                                    style='background:#f7f7f7; border-left:5px solid #198754; margin-bottom:18px;'>
-                                    <tr>
-                                        <td style='padding:12px 16px;'>
-                                            <p style='margin:4px 0;'><strong>{documentName}:</strong> {docNum}</p>
-                                            <p style='margin:4px 0;'><strong>Total Amount:</strong> {currency} {totalAmount}</p>
-                                            <p style='margin:4px 0;'><strong>Payment Due Date:</strong> {dueDate}</p>
-                                            <p style='margin:4px 0;'><strong>Payment Terms:</strong> {paymentTerms}</p>
-                                        </td>
-                                    </tr>
-                                </table>
-
-                                <p style='margin:10px 0 0 18px;'>
-                                    You can submit your payment via our standard payment channels.
-                                </p>
+                               {await TempBody(docType, docNum, docDate, ObjectType, currency, totalAmount, dueDate, paymentTerms, orginalInvoice, remarks)}
 
                                 <p style='margin:0 0 18px;'>
                                     Please do not reply to this email. Should you have any concerns, 
@@ -299,6 +290,89 @@ public class SendEmailServices
         }
     }
 
+    public async Task<string> TempBody(string docType,
+                                       string docNum,
+                                       string docDate,
+                                      string ObjectType,
+                                       string currency,
+                                       string totalAmount,
+                                       string dueDate,
+                                       string paymentTerms,
+                                       string originalInvoice,
+                                       string remarks)
+    {
+
+        string templateBody = "";
+
+        switch (ObjectType)
+        {
+            case "13":
+                templateBody = @$" <p style='margin:0 0 18px;'>
+                                    Please see attached {docType} No. <strong>{docNum}</strong> 
+                                    for the products or services dated <strong>{docDate}</strong> 
+                                    with the following details:
+                                </p>
+
+                                <!-- INFO BOX -->
+                                <table width='100%' cellpadding='0' cellspacing='0'
+                                    style='background:#f7f7f7; border-left:5px solid #198754; margin-bottom:18px;'>
+                                    <tr>
+                                        <td style='padding:12px 16px;'>
+                                            <p style='margin:4px 0;'><strong>Invoice Number:</strong> {docNum}</p>
+                                            <p style='margin:4px 0;'><strong>Total Amount:</strong> {currency} {totalAmount}</p>
+                                            <p style='margin:4px 0;'><strong>Payment Due Date:</strong> {dueDate}</p>
+                                            <p style='margin:4px 0;'><strong>Payment Terms:</strong> {paymentTerms}</p>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <p style='margin:10px 0 0 18px;'>
+                                    You can submit your payment via our standard payment channels.
+                                </p>";
+
+                break;
+            case "14":
+                templateBody =
+                                    $@"
+                                    <p style='margin:0 0 18px;'>
+                                        We have issued a Credit Memo on <strong>{docDate}</strong>
+                                        for your account amounting to <strong>{currency} {totalAmount}</strong>
+                                        with the following details:
+                                    </p>
+
+                                    <!-- INFO BOX -->
+                                    <table width='100%' cellpadding='0' cellspacing='0'
+                                        style='background:#f7f7f7; border-left:5px solid #198754; margin-bottom:18px;'>
+                                        <tr>
+                                            <td style='padding:12px 16px;'>
+                                                <p style='margin:4px 0;'>
+                                                    <strong>Credit Memo Number:</strong> {docNum}
+                                                </p>
+                                                <p style='margin:4px 0;'>
+                                                    <strong>Original Invoice Reference:</strong> {originalInvoice}
+                                                </p>
+                                                <p style='margin:4px 0;'>
+                                                    <strong>Reason for Credit:</strong> {remarks}
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    </table>
+
+                                    <p style='margin:10px 0 0;'>
+                                        A copy of the Credit Memo is attached to this email.
+                                        The amount has been applied as a credit to your account and
+                                        will be offset against your next open invoice.
+                                    </p>
+                                    ";
+
+                break;
+
+        }
+
+        return templateBody;
+
+
+    }
 
     private async Task SendEmailAsync(
       EmailAccnt email,

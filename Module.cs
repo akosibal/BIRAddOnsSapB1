@@ -57,19 +57,19 @@ public static class Module
                 string errMsg;
                 oCompany.GetLastError(out retCode, out errMsg);
 
-                Console.WriteLine($"Error saving to UDT: {errMsg}");
+               // Console.WriteLine($"Error saving to UDT: {errMsg}");
                 sboApplication.MessageBox(
                     $"Email sent, but failed to save to UDT:\n\n{errMsg}",
                     1, "OK", "", "");
                 return false;
             }
 
-            Console.WriteLine($"Successfully saved log to UDT with DocEntry {newDocEntry}.");
+           // Console.WriteLine($"Successfully saved log to UDT with DocEntry {newDocEntry}.");
             return true;
         }
         catch (Exception exUdt)
         {
-            Console.WriteLine($"Exception saving to UDT: {exUdt.Message}");
+           // Console.WriteLine($"Exception saving to UDT: {exUdt.Message}");
             sboApplication.MessageBox(
                 $"Email sent, but UDT save failed:\n\n{exUdt.Message}",
                 1, "OK", "", "");
@@ -162,7 +162,7 @@ public static class Module
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error updating email log: {ex.Message}");
+           // Console.WriteLine($"Error updating email log: {ex.Message}");
 
             sboApplication.StatusBar.SetText(
                 $"Failed to update email log: {ex.Message}",
@@ -225,7 +225,7 @@ public static class Module
             SAPbouiCOM.Menus oFolderSub = oMarsmanFolder.SubMenus;
             oFolderSub.AddEx(oChild);
 
-            Console.WriteLine("✅ Marsman Tools menu created with Auto Email Logs.");
+          //  Console.WriteLine("✅ Marsman Tools menu created with Auto Email Logs.");
         }
         catch (Exception ex)
         {

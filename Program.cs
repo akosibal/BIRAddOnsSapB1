@@ -16,14 +16,14 @@ class Program
 
     static void Main(string[] args)
     {
-        Console.WriteLine("SAP Business One Add-on");
+      //  Console.WriteLine("SAP Business One Add-on");
 
         if (args.Length == 0)
         {
-            Console.WriteLine(
+          /*   Console.WriteLine(
                 "SAP Business One connection string was not provided."
             );
-
+ */
             return;
         }
 
@@ -37,7 +37,7 @@ class Program
             SBO_Application = conn.SBO_Application;
             Company = conn.company;
 
-            Console.WriteLine("Add-on started.");
+           // Console.WriteLine("Add-on started.");
 
             SBO_Application.MenuEvent += SBO_Application_MenuEvent;
             SBO_Application.FormDataEvent +=
@@ -49,8 +49,8 @@ class Program
             Module.AddMenuItems(SBO_Application);
 
 
-            Console.WriteLine("FormDataEvent registered.");
-            Console.WriteLine("Waiting for SAP Business One events...");
+          //  Console.WriteLine("FormDataEvent registered.");
+          //  Console.WriteLine("Waiting for SAP Business One events...");
 
             /*       Module.SaveEmailLogs("1",
                                        Company,
@@ -62,13 +62,13 @@ class Program
                                 ); */
 
 
-            System.Threading.Thread.Sleep(
+             System.Threading.Thread.Sleep(
                 System.Threading.Timeout.Infinite
-            );
+            ); 
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex);
+          //  Console.WriteLine(ex);
         }
     }
 
