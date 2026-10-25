@@ -89,12 +89,20 @@ public class SendEmailServices
                 }
             }
 
-            recipients.Clear();
+            string TestTO = Program.Configuration["TestEmail:To"];
+            string TestCC = Program.Configuration["TestEmail:CC"];
 
-            if (!recipients.Any())
+
+            if (!string.IsNullOrEmpty(TestTO))
             {
-                recipients.Add("bacadimas@marsmandrysdale.com");
+                recipients.Clear();
+
+                if (!recipients.Any())
+                {
+                    recipients.Add(TestTO);
+                }
             }
+
 
             // ============================
             // 2. Invoice details from OINV
@@ -273,7 +281,7 @@ public class SendEmailServices
         {
 
             MltpleTo = recipients,
-            BCC = userEmail.FirstOrDefault()
+            CC = userEmail.FirstOrDefault()
         };
 
         // ============================
