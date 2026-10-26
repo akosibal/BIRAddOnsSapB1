@@ -39,6 +39,16 @@ public static class AddModules
         if (email == null) { Console.WriteLine("NULL: email"); return; }
         if (reportClass == null) { Console.WriteLine("NULL: reportClass"); return; }
 
+        string cardCode = "";
+        string cardName = "";
+        string InvoiceNo = "";
+        string userSign = "";
+
+        string userCode = "";
+        string userName = "";
+
+        DateTime taxDate = new DateTime();
+
 
         try
         {
@@ -70,13 +80,12 @@ public static class AddModules
             if (oDBDataSource == null) { Console.WriteLine("NULL: OINV DataSource"); return; }
 
             docEntry = oDBDataSource.GetValue("DocEntry", 0).Trim();
-            string cardCode = oDBDataSource.GetValue("CardCode", 0).Trim();
-            string cardName = oDBDataSource.GetValue("CardName", 0).Trim();
-            string InvoiceNo = oDBDataSource.GetValue("DocNum", 0).Trim();
-            string userSign = oDBDataSource.GetValue("UserSign", 0).Trim();
+            cardCode = oDBDataSource.GetValue("CardCode", 0).Trim();
+            cardName = oDBDataSource.GetValue("CardName", 0).Trim();
+            InvoiceNo = oDBDataSource.GetValue("DocNum", 0).Trim();
+            userSign = oDBDataSource.GetValue("UserSign", 0).Trim();
 
-            string userCode = "";
-            string userName = "";
+
 
             SAPbobsCOM.Recordset oRS = null;
 
@@ -110,7 +119,7 @@ public static class AddModules
 
             string taxDateStr = oDBDataSource.GetValue("TaxDate", 0).Trim();
 
-            DateTime taxDate;
+
             bool parsed = DateTime.TryParseExact(
                 taxDateStr,
                 "yyyyMMdd",                          // SAP B1 standard format
@@ -228,6 +237,20 @@ public static class AddModules
                     "OK",
                     "",
                     "");
+
+                Module.SaveEmailLogs(docEntry,
+                              Company,
+                              SBO_Application,
+                              cardCode,        // Replace with actual CardCode
+                              cardName,// Replace with actual CardName
+                              InvoiceNo,    // Replace with actual DocNum
+                              ObjectType,          // DocType (13 = Invoice)
+                              "N",
+                              userName,
+                              taxDate,
+                              "Failure to Send"
+                       );
+
             }
             catch
             {
@@ -628,6 +651,8 @@ public static class AddModules
         {
             SBO_Application.MessageBox(
                 "Error sending invoice: " + ex.Message);
+
+
         }
     }
 

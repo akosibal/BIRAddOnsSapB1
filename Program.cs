@@ -17,17 +17,19 @@ class Program
     public static ReportClass reportClass = new ReportClass("192.168.5.22", "TEST_MDTI_20260732", "sa", "1q2w#E$R");
     public static string pathReportTemplates { get; set; } = "";
 
+    private static readonly ManualResetEventSlim ExitEvent = new(false);
+
 
     static void Main(string[] args)
     {
-          Console.WriteLine("SAP Business One Add-on");
+        Console.WriteLine("SAP Business One Add-on");
 
         if (args.Length == 0)
         {
-              Console.WriteLine(
-                  "SAP Business One connection string was not provided."
-              );
-   
+            Console.WriteLine(
+                "SAP Business One connection string was not provided."
+            );
+
             return;
         }
 
@@ -40,7 +42,7 @@ class Program
 
             Configuration = builder.Build();
 
-            reportClass = new ReportClass(Configuration["SapConnection:Server"],Configuration["SapConnection:CompanyDB"],Configuration["SapConnection:UserName"],Configuration["SapConnection:Password"]);
+            reportClass = new ReportClass(Configuration["SapConnection:Server"], Configuration["SapConnection:CompanyDB"], Configuration["SapConnection:UserName"], Configuration["SapConnection:Password"]);
             var conn = new Conn();
 
             conn.Connect(args[0]);
@@ -62,7 +64,7 @@ class Program
 
 
             //  Console.WriteLine("FormDataEvent registered.");
-              Console.WriteLine("Waiting for SAP Business One events...");
+            Console.WriteLine("Waiting for SAP Business One events...");
 
             /*       Module.SaveEmailLogs("1",
                                        Company,
@@ -74,13 +76,20 @@ class Program
                                 ); */
 
 
-            System.Threading.Thread.Sleep(
-               System.Threading.Timeout.Infinite
-           );
+            /*   System.Threading.Thread.Sleep(
+                 System.Threading.Timeout.Infinite
+             ); */
+            ExitEvent.Wait();
+
         }
         catch (Exception ex)
         {
-              Console.WriteLine(ex);
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            Cleanup();
+            Console.WriteLine("SAP Business One Add-on closed.");
         }
     }
 
@@ -89,12 +98,68 @@ class Program
         switch (EventType)
         {
             case SAPbouiCOM.BoAppEventTypes.aet_ShutDown:
+                Console.WriteLine("SAP Business One is shutting down...");
+                ExitEvent.Set();
+                break;
+
             case SAPbouiCOM.BoAppEventTypes.aet_CompanyChanged:
+                Console.WriteLine("SAP company changed.");
+                break;
+
             case SAPbouiCOM.BoAppEventTypes.aet_ServerTerminition:
-                RemoveMenuItems();
-                System.Windows.Forms.Application.Exit();
+                Console.WriteLine("SAP Business One server termination.");
+                ExitEvent.Set();
                 break;
         }
+    }
+
+    private static void Cleanup()
+    {
+        try
+        {
+            if (SBO_Application != null)
+            {
+                SBO_Application.MenuEvent -= SBO_Application_MenuEvent;
+                SBO_Application.FormDataEvent -= SBO_Application_FormDataEvent;
+                SBO_Application.AppEvent -= SBO_Application_AppEvent;
+                SBO_Application.ItemEvent -= SBO_Application_ItemEvent;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error unsubscribing SAP events: {ex.Message}");
+        }
+
+        try
+        {
+            if (Company != null)
+            {
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(Company);
+                Company = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error releasing Company: {ex.Message}");
+        }
+
+        try
+        {
+            if (SBO_Application != null)
+            {
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(
+                    SBO_Application
+                );
+
+                SBO_Application = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error releasing SAP Application: {ex.Message}");
+        }
+
+        ExitEvent.Dispose();
     }
 
     private static void RemoveMenuItems()
