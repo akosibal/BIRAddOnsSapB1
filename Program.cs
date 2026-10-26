@@ -40,6 +40,7 @@ class Program
 
             Configuration = builder.Build();
 
+            reportClass = new ReportClass(Configuration["SapConnection:Server"],Configuration["SapConnection:CompanyDB"],Configuration["SapConnection:UserName"],Configuration["SapConnection:Password"]);
             var conn = new Conn();
 
             conn.Connect(args[0]);
