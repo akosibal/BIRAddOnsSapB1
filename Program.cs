@@ -19,6 +19,8 @@ class Program
 
     private static readonly ManualResetEventSlim ExitEvent = new(false);
 
+    public static EmailAccnt emailAccnt = new EmailAccnt();
+
 
     static void Main(string[] args)
     {
@@ -42,6 +44,11 @@ class Program
 
             Configuration = builder.Build();
 
+            emailAccnt.Host = Configuration["EmailSettings:SmtpHost"];
+            emailAccnt.Port = int.Parse(Configuration["EmailSettings:SmtpPort"]);
+            emailAccnt.CredUserId = Configuration["EmailSettings:SenderEmail"];
+            emailAccnt.Password = Configuration["EmailSettings:SenderPassword"];
+
             reportClass = new ReportClass(Configuration["SapConnection:Server"], Configuration["SapConnection:CompanyDB"], Configuration["SapConnection:UserName"], Configuration["SapConnection:Password"]);
             var conn = new Conn();
 
@@ -51,7 +58,7 @@ class Program
             SBO_Application = conn.SBO_Application;
             Company = conn.company;
 
-            // Console.WriteLine("Add-on started.");
+             Console.WriteLine("Add-on started.");
 
             SBO_Application.MenuEvent += SBO_Application_MenuEvent;
             SBO_Application.FormDataEvent +=

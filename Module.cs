@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 public static class Module
 {
 
-    
+
 
 
     public static bool SaveEmailLogs(
@@ -19,9 +19,10 @@ public static class Module
     string sent,
     string userCOde,
     DateTime InvoiceDate,
-    string remarks)
+    string remarks,
+    string resent = "N")
     {
-        /*    SAPbobsCOM.UserTable oUserTable = new SAPbobsCOM.UserTable(); */
+        SAPbobsCOM.Documents oInvoice = null;
 
         try
         {
@@ -50,6 +51,7 @@ public static class Module
             oUserTable.UserFields.Fields.Item("U_Remarks").Value = remarks;
             oUserTable.UserFields.Fields.Item("U_UserCode").Value = userCOde;
             oUserTable.UserFields.Fields.Item("U_CreatedDate").Value = DateTime.Now.ToString("MM/dd/yyyy");
+            oUserTable.UserFields.Fields.Item("U_ReSent").Value = resent;
 
             // 5. Add the record to the database
             int retCode = oUserTable.Add();
@@ -59,31 +61,126 @@ public static class Module
                 string errMsg;
                 oCompany.GetLastError(out retCode, out errMsg);
 
-               // Console.WriteLine($"Error saving to UDT: {errMsg}");
+                // Console.WriteLine($"Error saving to UDT: {errMsg}");
                 sboApplication.MessageBox(
                     $"Email sent, but failed to save to UDT:\n\n{errMsg}",
                     1, "OK", "", "");
                 return false;
             }
 
-           // Console.WriteLine($"Successfully saved log to UDT with DocEntry {newDocEntry}.");
+
+            UpdateTrxEmailStatus(
+                oCompany,
+                newDocEntry,
+                sent,
+                sboApplication,
+                docType
+            );
+
+
+            // Console.WriteLine($"Successfully saved log to UDT with DocEntry {newDocEntry}.");
             return true;
         }
         catch (Exception exUdt)
         {
-           // Console.WriteLine($"Exception saving to UDT: {exUdt.Message}");
+            // Console.WriteLine($"Exception saving to UDT: {exUdt.Message}");
             sboApplication.MessageBox(
-                $"Email sent, but UDT save failed:\n\n{exUdt.Message}",
+                $"Email sent, but UDT save failed:\n\n{exUdt.InnerException?.Message ?? exUdt.Message}",
                 1, "OK", "", "");
             return false;
         }
         finally
         {
-            /*  if (oUserTable != null)
-             {
-                 Marshal.ReleaseComObject(oUserTable);
-                 oUserTable = null;
-             } */
+            if (oInvoice != null)
+            {
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(oInvoice);
+                oInvoice = null;
+            }
+        }
+    }
+
+
+    private static bool UpdateTrxEmailStatus(
+    SAPbobsCOM.Company oCompany,
+    string docEntry,
+    string sent,
+    SAPbouiCOM.Application sboApplication,
+    string docType)
+    {
+        SAPbobsCOM.Documents oInvoice = null;
+
+        try
+        {
+            Console.WriteLine("Starting OINV update...");
+            Console.WriteLine($"DocEntry: {docEntry}");
+            Console.WriteLine($"Company: {oCompany.CompanyDB}");
+
+            switch (docType)
+            {
+                case "13": // Sales Invoice
+                    Console.WriteLine("Document type is Sales Invoice (13).");
+                    oInvoice = (SAPbobsCOM.Documents)oCompany.GetBusinessObject(
+                                    SAPbobsCOM.BoObjectTypes.oInvoices
+                                );
+                    break;
+                case "14": // Credit Memo
+                    Console.WriteLine("Document type is Credit Memo (14).");
+                    oInvoice = (SAPbobsCOM.Documents)oCompany.GetBusinessObject(
+                                    SAPbobsCOM.BoObjectTypes.oCreditNotes
+                                );
+                    break;
+                default:
+                    throw new Exception($"Unsupported document type: {docType}");
+            }
+
+
+
+            Console.WriteLine("Documents object created.");
+
+            bool found = oInvoice.GetByKey(Convert.ToInt32(docEntry));
+
+            Console.WriteLine($"Invoice found: {found}");
+
+            if (!found)
+                throw new Exception($"Invoice {docEntry} not found.");
+
+            Console.WriteLine("Assigning UDF...");
+
+            oInvoice.UserFields.Fields.Item("U_E_InvoiceSent").Value =
+                sent == "Y" ? "YES" : "NO";
+
+            Console.WriteLine("Calling Update...");
+
+            int result = oInvoice.Update();
+
+            if (result != 0)
+            {
+                oCompany.GetLastError(out result, out string error);
+                throw new Exception(error);
+            }
+
+            Console.WriteLine("OINV successfully updated.");
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"OINV ERROR: {ex}");
+
+            sboApplication.MessageBox(
+                $"Failed to update invoice email status:\n{ex.Message}",
+                1, "OK", "", ""
+            );
+
+            return false;
+        }
+        finally
+        {
+            if (oInvoice != null)
+            {
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(oInvoice);
+                oInvoice = null;
+            }
         }
     }
 
@@ -98,7 +195,8 @@ public static class Module
      string sent,
      string userCOde,
      DateTime InvoiceDate,
-     string remarks)
+     string remarks,
+     string resent = "N")
     {
         SAPbobsCOM.UserTable oUserTable = null;
         SAPbobsCOM.Recordset rs = null;
@@ -146,6 +244,7 @@ public static class Module
             oUserTable.UserFields.Fields.Item("U_Remarks").Value = remarks;
             oUserTable.UserFields.Fields.Item("U_UserCode").Value = userCOde;
             oUserTable.UserFields.Fields.Item("U_CreatedDate").Value = DateTime.Today;
+            oUserTable.UserFields.Fields.Item("U_ReSent").Value = resent;
 
             int retCode = oUserTable.Update();
 
@@ -164,7 +263,7 @@ public static class Module
         }
         catch (Exception ex)
         {
-           // Console.WriteLine($"Error updating email log: {ex.Message}");
+            // Console.WriteLine($"Error updating email log: {ex.Message}");
 
             sboApplication.StatusBar.SetText(
                 $"Failed to update email log: {ex.Message}",
@@ -203,7 +302,7 @@ public static class Module
             oFolder.Type = SAPbouiCOM.BoMenuType.mt_POPUP;   // ← folder, not string
             oFolder.UniqueID = "MNU_MARSMAN_ROOT";
             oFolder.String = "Marsman Tools";
-            oFolder.Position = 0;  
+            oFolder.Position = 0;
 
             // Attach at the TOP level of Main Menu
             oMenuItem = oMenus.Item("43520");   // Modules / Main Menu root
@@ -227,7 +326,7 @@ public static class Module
             SAPbouiCOM.Menus oFolderSub = oMarsmanFolder.SubMenus;
             oFolderSub.AddEx(oChild);
 
-          //  Console.WriteLine("✅ Marsman Tools menu created with Auto Email Logs.");
+            //  Console.WriteLine("✅ Marsman Tools menu created with Auto Email Logs.");
         }
         catch (Exception ex)
         {

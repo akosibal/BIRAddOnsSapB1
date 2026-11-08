@@ -23,6 +23,7 @@ public class SendEmailServices
         SAPbobsCOM.Recordset oRS = null;
         var recipients = new List<string>();
         var userEmail = new List<string>();
+      
 
         // Placeholders for template
         string customerName = "";
@@ -32,7 +33,7 @@ public class SendEmailServices
         string currency = "";
         string totalAmount = "";
         string paymentTerms = "";
-        string userName = "";
+        string userName = "";      
         string companyName = "MEPI";
         string companyContact = "123-4567";
         string orginalInvoice = "";
@@ -173,17 +174,31 @@ public class SendEmailServices
             // ============================
             // 3. SAP user (name + email) from OUSR
             // ============================
-            oRS.DoQuery($"SELECT U_NAME, E_Mail FROM OUSR WHERE USERID = {userSign}");
+            oRS.DoQuery($"SELECT U_NAME, E_Mail,U_Sup_Email FROM OUSR WHERE USERID = {userSign}");
 
             if (!oRS.EoF)
             {
                 userName = oRS.Fields.Item("U_NAME").Value?.ToString() ?? "";
 
+              
                 var user1Email = oRS.Fields.Item("E_Mail").Value?.ToString() ?? "";
+                var supervisor1Email = oRS.Fields.Item("U_Sup_Email").Value?.ToString() ?? "";
+
+
                 if (!string.IsNullOrWhiteSpace(user1Email))
                 {
                     userEmail.AddRange(
                         user1Email
+                            .Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+                            .Select(e => e.Trim())
+                            .Where(e => !string.IsNullOrWhiteSpace(e))
+                    );
+                }
+
+                if (!string.IsNullOrWhiteSpace(supervisor1Email))
+                {
+                    userEmail.AddRange(
+                        supervisor1Email
                             .Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
                             .Select(e => e.Trim())
                             .Where(e => !string.IsNullOrWhiteSpace(e))
@@ -462,11 +477,13 @@ public class SendEmailServices
         using var smtp = new SmtpClient();
 
         await smtp.ConnectAsync(
-            email.Host,
-            email.Port,
+            Program.emailAccnt.Host,
+            Program.emailAccnt.Port,
             email.EnableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None);
 
-        await smtp.AuthenticateAsync(email.CredUserId, email.Password);
+        await smtp.AuthenticateAsync(
+            Program.emailAccnt.CredUserId,
+            Program.emailAccnt.Password);
 
         await smtp.SendAsync(message);
         await smtp.DisconnectAsync(true);

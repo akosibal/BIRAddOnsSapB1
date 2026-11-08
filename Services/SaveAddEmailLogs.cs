@@ -180,7 +180,8 @@ public static class AddModules
                                     "Y",
                                     userName,
                                     taxDate,
-                                    "Email Sent Successfully"
+                                    "Email Sent Successfully",
+                                    "N"
                              );
 
 
@@ -205,7 +206,8 @@ public static class AddModules
                                    "N",
                                    userName,
                                    taxDate,
-                                   "Failure to Send"
+                                   sendEmail.message,
+                                   "N"
                             );
 
                     SBO_Application.MessageBox(
@@ -248,7 +250,8 @@ public static class AddModules
                               "N",
                               userName,
                               taxDate,
-                              "Failure to Send"
+                              ex.Message,
+                              "N"
                        );
 
             }
@@ -594,7 +597,8 @@ public static class AddModules
                                    "Y",
                                    userName,
                                    taxDate,
-                                   "Email Sent Successfully"
+                                   "Email Sent Successfully",
+                                   "Y"
                             );
 
                         SBO_Application.StatusBar.SetText(
@@ -620,7 +624,8 @@ public static class AddModules
                                    "N",
                                    userName,
                                    taxDate,
-                                   sendEmail.message
+                                   sendEmail.message,
+                                   "Y"
                             );
 
                         failedCount++;
