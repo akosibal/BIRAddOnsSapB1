@@ -296,7 +296,7 @@ public class SendEmailServices
         {
 
             MltpleTo = recipients,
-            CC = userEmail.FirstOrDefault()
+            CC = userEmail.Any() ? string.Join(";", userEmail) : null,
         };
 
         // ============================
